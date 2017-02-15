@@ -1,0 +1,209 @@
+//************************************************************************
+// Confidential Trade Secret.
+// Copyright (c) 1997 Data Access Corporation, Miami Florida
+// as an unpublished work.  All rights reserved.
+// DataFlex Is A registered trademark Of Data Access Corporation.
+//
+//************************************************************************
+//************************************************************************
+//
+// $File name  : DfAbout.pkg
+// $File title : About class support
+// Notice      :
+// $Author(s)  : Vincent Oorsprong, Ken Ross
+//
+//************************************************************************
+Use LanguageText.pkg
+Use Windows.pkg
+Use DFbitmap.pkg
+Use GlobalFunctionsProcedures.pkg
+Use cTextEdit.pkg
+
+Use cli.pkg
+Use DFBTRDRV.PKG
+
+{ Visibility=Private }
+Class SysInfoDialog Is A ModalPanel
+    Procedure Construct_Object
+        Forward Send Construct_Object
+
+        Set Label to C_$SystemInformation
+        Set Size to 140 267
+        Set piMinSize to 140 267
+        Set Locate_Mode To CENTER_ON_SCREEN
+        Set Border_Style to Border_Thick
+
+        Object oCloseButton Is A Button
+            Set Label To C_$Close
+            Set Location To 120 210
+            Set Message Item 0 To (Refproc (Close_Panel))
+            Set Default_State To True
+            Set peAnchors to anBottomRight
+        End_Object
+
+        On_Key kCancel Send Close_Panel
+    End_Procedure
+End_Class
+
+// Purpose:
+//
+// Ken Ross 12/17/96 5:16PM
+//
+{ OverrideProperty=StatusBar_Id DesignTime=False }
+{ OverrideProperty=ToolBar_Id DesignTime=False }
+{ HelpTopic=AboutDialog }
+Class AboutDialog Is A ModalPanel
+    Procedure Construct_Object
+        String sVdfRootDir
+
+        Forward Send Construct_Object
+
+        Set Label to "About"
+        Set Size to 124 212
+        Set Locate_Mode To CENTER_ON_SCREEN
+
+        Object oBox Is A Container3d
+            Set Border_Style to Border_Normal
+            Set Size to 123 211
+            Set Location to 1 1
+            Set Bitmap to "AboutBgS.bmp"
+
+            Object oAboutGraphic Is A BitmapContainer
+                Set Border_Style To Border_None
+                Set Bitmap_Style To Bitmap_Center
+                Set Size to 26 26
+                Set Location to 5 5
+            End_Object
+
+            Object oProductName is a TextBox
+                Set Label to C_$ProductName
+                Set Size to 10 45
+                Set Location to 8 52
+                Set FontWeight to 800
+                Set Transparent_State to True
+                Set FontSize to 24 14
+                Set TextColor to (RGB(255, 90, 0))
+            End_Object
+            Object oProductNameShadow is a TextBox
+                Set Label to C_$ProductName
+                Set Size to 10 45
+                Set Location to 9 53
+                Set FontWeight to 800
+                Set Transparent_State to True
+                Set FontSize to 24 14
+                Set TextColor to clDkGray
+            End_Object
+
+            Object oVersion Is A TextBox
+                Set Label To C_$Version
+                Set Size To 10 25
+                Set Location to 26 53
+                Set FontSize to 18 12
+                Set Transparent_State to True
+            End_Object
+
+            Object oAuthor Is A TextBox
+                Set Label to C_$Author
+                Set Size to 10 22
+                Set Location to 66 53
+                Set Transparent_State to True
+            End_Object
+
+            Object oCopyright is a TextBox
+                Set Label To C_$Copyright
+                Set Size To 10 31
+                Set Location to 54 53
+                Set Transparent_State to True
+            End_Object
+
+            Object oOKButton is a Button
+                On_Item C_$OK Send Close_Panel
+                Set Size to 14 50
+                Set Location to 103 155
+            End_Object
+    
+        End_Object
+
+        On_Key Kcancel Send KeyAction Of oOKButton
+
+        Set Logo To "DacAbout.bmp"  // square bitmaps Of 42x42 work best
+    End_Procedure
+
+    { MethodType=Property }
+    Procedure Set ProductName String sProductName
+        Set Label of oProductNameShadow to sProductName
+        Set Label Of oProductName To sProductName
+    End_Procedure
+
+    { MethodType=Property }
+    Procedure Set Version String sVersion
+        Set Label Of oVersion To sVersion
+    End_Procedure
+
+    { MethodType=Property }
+    Procedure Set Copyright string sCopyright
+        Set Label Of oCopyright To sCopyright
+    End_Procedure
+
+    { MethodType=Property }
+    Procedure Set Author String sAuthor
+        Set Label Of oAuthor To sAuthor
+    End_Procedure
+
+    { MethodType=Property }
+    Procedure Set Logo string sLogo
+        // square bitmaps Of 42x42 work best
+        Set Bitmap Of oAboutGraphic To sLogo
+    End_Procedure
+
+    Procedure End_Construct_Object
+        Handle hoVersionInfo
+        Boolean bIncluded
+        Integer iMajor iMinor iRelease iBuild
+        String sLabel
+
+        Get Label Of oVersion To sLabel
+        If (sLabel = C_$VERSION) Begin
+            // set it To the version info Of the program, if available
+            If (ghoApplication <> 0) Begin
+                Get phoVersionInfo of ghoApplication to hoVersionInfo
+                If (hoVersionInfo <> 0) Begin
+                    Get pbIncluded of hoVersionInfo to bIncluded
+                    If (bIncluded) Begin
+                        Get piVersionMajor of hoVersionInfo to iMajor
+                        Get piVersionMinor of hoVersionInfo to iMinor
+                        Get piVersionRelease of hoVersionInfo to iRelease
+                        Get piVersionBuild of hoVersionInfo to iBuild
+                        Move (SFormat (C_$VERSION + ": %1.%2.%3.%4", iMajor, iMinor, iRelease, iBuild)) to sLabel
+                        Set Version to sLabel
+                    End
+                End
+            End
+        End
+
+        Forward Send End_Construct_Object
+    End_Procedure
+End_Class
+
+Procedure DoAbout String sTitle String sVersion String sCopyRight String sAuthor String sBitmap
+        Integer hoObj hoMain
+
+        // create object
+        Object About is an AboutDialog
+            // if no title passed use the label of the main panel
+            // (if a main panel exists).
+            If sTitle     eq '' Begin
+                Get Main_Window of desktop to hoMain
+                If hoMain Get Label of hoMain to sTitle
+            End
+            Set productname to sTitle
+            Set version     to sVersion
+            Set copyright   to sCopyRight
+            Set author      to sAuthor
+            If sBitmap    ne '' ;
+               Set logo to sBitMap // square bitmaps of 42x42 work best
+            Move Self to hoObj // object Id
+        End_Object
+        Send Popup   of hoObj    // popup the about object
+        Send Destroy of hoObj // when done, it will be destroyed
+End_Procedure

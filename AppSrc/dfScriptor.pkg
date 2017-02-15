@@ -1,0 +1,3136 @@
+// DataFlex Scriptor
+// Sergey V. Natarov
+//
+Use dfScriptor.h
+Use dfsSystem.pkg
+
+// Classes
+Class cDFScriptorBase is a cObject
+    // Object constructor, defines all DFScriptor data
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Property tDFSToken[]        ptTokens
+        Property tDFSVariable[]     ptVariables
+        Property tDFSFile[]         ptDFSFiles
+        Property tCompilerInfo[]    ptCompilerInfo
+        Property tDFSError[]        ptDFSErrors
+        Property tDFSScope[]        ptDFSScopes
+        Property String[]           psScriptParameters
+        Property String             psReturnValue
+        //
+        Property Integer        piGeneratePRN   True // False
+        Property Integer        piPRNChannel    1
+        Property Integer        piScriptChannel 2
+        //
+        Property String         psScriptSource  ""
+        Property String         psScriptFile    ""
+        Property Integer        piExecutable    0
+        // Metrics
+        Property TimeSpan       ptsCompileTime
+        // Stats
+        Property Integer        piErrorsCount
+        Property Integer        piLinesCount
+        Property Integer        piTokensCount
+        Property Integer        piCommandsCount
+        Property Integer        piDirectivesCount
+        Property Integer        piVariablesCount
+        Property Integer        piConstantsCount
+        Property Integer        piObjectsCount
+        Property Integer        piMethodsCount
+        Property Integer        piScopeStartCount
+        //
+        Property Integer        piScopeStopCount
+        //
+    End_Procedure
+    // Adds information about new method into the methods list
+    Procedure Add_Method_Info String sName String sType Integer iDepth Integer iLine
+        Integer iFile
+        tDFSFile[] ltDFSFiles
+        Get ptDFSFiles  to ltDFSFiles
+        Move (SizeOfArray(ltDFSFiles)) to iFile
+        Move sName      to ltDFSFiles[iFile].sFileName
+        Move sType      to ltDFSFiles[iFile].sMethod
+        Move iDepth     to ltDFSFiles[iFile].iDepth
+        Move iLine      to ltDFSFiles[iFile].iLine
+        Set ptDFSFiles  to ltDFSFiles
+    End_Procedure
+    // Registers new compile error found
+    Procedure Add_Error_Info Integer iNumber Integer iLine Integer iErrLine String sText String sFile
+        Integer iError
+        tDFSError[] ltDFSErrors
+        Get ptDFSErrors to ltDFSErrors
+        Move (SizeOfArray(ltDFSErrors)) to iError
+        Move iNumber    to ltDFSErrors[iError].iNumber
+        Move iLine      to ltDFSErrors[iError].iLine
+        Move iErrLine  to ltDFSErrors[iError].iErrLine
+        Move sText      to ltDFSErrors[iError].sText
+        Move sFile      to ltDFSErrors[iError].sFile
+        Set ptDFSErrors to ltDFSErrors
+        Set piErrorsCount to (iError+1)
+    End_Procedure
+    // Adds new message into the Compiler Information list to be shown if required
+    Procedure Add_Compiler_Info Integer iLevel String sInfo
+        Integer iLine
+        tCompilerInfo[] ltCompilerInfo
+        Get ptCompilerInfo to ltCompilerInfo
+        Move (SizeOfArray(ltCompilerInfo)) to iLine
+        Move iLevel to ltCompilerInfo[iLine].iLevel
+        Move sInfo  to ltCompilerInfo[iLine].sInfo
+        Set ptCompilerInfo to ltCompilerInfo
+    End_Procedure
+    // Procedure clears current script EXEC info and makes it ready to run script again
+    Procedure Clear_Script
+        String[] lsDummy
+        Move DFS_DESKTOP        to DFS$CURRENT$SCOPE
+        Move 0                  to giScript$Return$Flag
+        Set  psReturnValue      to "" //lsDummy
+        Set  psScriptParameters to lsDummy
+    End_Procedure
+    // Procedure deletes all cuurent script data
+    Procedure Delete_Data
+        tDFSToken[]     ltTokens
+        tDFSVariable[]  ltVariables
+        tDFSFile[]      ltDFSFiles
+        tDFSError[]     ltDFSErrors
+        tCompilerInfo[] ltCompilerInfo
+        tDFSScope[]     ltDFSScopes
+        tDFSToken[]     ltDFSTokens
+        String[]        sIncludeFiles
+        Integer[]       liDummy
+        TimeSpan dtNull
+        Set     ptVariables         to ltVariables
+        Set     ptTokens            to ltTokens
+        Set     ptDFSFiles          to ltDFSFiles
+        Set     ptDFSErrors         to ltDFSErrors
+        Set     ptCompilerInfo      to ltCompilerInfo
+        Set     ptDFSScopes         to ltDFSScopes
+        Move    ltDFSScopes         to gtDFSScopes
+        Move    ltDFSTokens         to gtDFSTokens
+        Move    liDummy             to giDFSBlockStack
+        Set     ptsCompileTime      to dtNull
+        Set     piErrorsCount       to 0
+        Set     piLinesCount        to 0
+        Set     piTokensCount       to 0
+        Set     piCommandsCount     to 0
+        Set     piDirectivesCount   to 0
+        Set     piVariablesCount    to 0
+        Set     piConstantsCount    to 0
+        Set     piMethodsCount      to 0
+        Set     piObjectsCount      to 0
+        Set     piScopeStartCount   to 0
+        Set     piScopeStopCount    to 0
+        Send    Clear_Script
+    End_Procedure
+    // Function returns Scope name by ID
+    Function Scope_Name Integer iScope Returns String
+        tDFSScope[] ltScopes
+        If (iScope=0) Function_Return "[Main Script]"
+        Get ptDFSScopes to ltScopes
+        Function_Return ltScopes[iScope].sName
+    End_Function
+    // Returns command ID by token image or DFT_ERROR
+    Function Command_ID String sImage Returns Integer
+        Case Begin
+            Case (sImage="USE")
+                Function_Return DFC_USE
+            Case (sImage="STRING")
+                Function_Return DFC_STRING
+            Case (sImage="INTEGER")
+                Function_Return DFC_INTEGER
+            Case (sImage="HANDLE")
+                Function_Return DFC_HANDLE
+            Case (sImage="BOOLEAN")
+                Function_Return DFC_BOOLEAN
+            Case (sImage="POINTER")
+                Function_Return DFC_POINTER
+            Case (sImage="NUMBER")
+                Function_Return DFC_NUMBER
+            Case (sImage="DATE")
+                Function_Return DFC_DATE
+            Case (sImage="DATETIME")
+                Function_Return DFC_DATETIME
+            Case (sImage="TIMESPAN")
+                Function_Return DFC_TIMESPAN
+            Case (sImage="TIME")
+                Function_Return DFC_TIME
+            Case (sImage="REAL")
+                Function_Return DFC_REAL
+            Case (sImage="CHAR")
+                Function_Return DFC_CHAR
+            Case (sImage="UCHAR")
+                Function_Return DFC_UCHAR
+            Case (sImage="SHORT")
+                Function_Return DFC_SHORT 
+            Case (sImage="USHORT")
+                Function_Return DFC_USHORT
+            Case (sImage="UINTEGER")
+                Function_Return DFC_UINTEGER
+            Case (sImage="BIGINT")
+                Function_Return DFC_BIGINT
+            Case (sImage="UBIGINT")
+                Function_Return DFC_UBIGINT
+            Case (sImage="ADDRESS")
+                Function_Return DFC_ADDRESS
+            Case (sImage="ROWID")
+                Function_Return DFC_ROWID
+            Case (sImage="VARIANT")
+                Function_Return DFC_VARIANT
+            Case (sImage="OPEN")
+                Function_Return DFC_OPEN
+            Case (sImage="DEFINE")
+                Function_Return DFC_DEFINE
+            Case (sImage="CLASS")
+                Function_Return DFC_CLASS
+            Case (sImage="END_CLASS")
+                Function_Return DFC_END_CLASS
+            Case (sImage="OBJECT")
+                Function_Return DFC_OBJECT
+            Case (sImage="END_OBJECT")
+                Function_Return DFC_END_OBJECT
+            Case (sImage="PROPERTY")
+                Function_Return DFC_PROPERTY
+            Case (sImage="REGISTER_OBJECT")
+                Function_Return DFC_REGISTER_OBJECT
+            Case (sImage="WHILE")
+                Function_Return DFC_WHILE
+            Case (sImage="FOR")
+                Function_Return DFC_FOR
+            Case (sImage="LOOP")
+                Function_Return DFC_LOOP
+            Case (sImage="REPEAT")
+                Function_Return DFC_REPEAT
+            Case (sImage="UNTIL")
+                Function_Return DFC_UNTIL
+            Case (sImage="IF")
+                Function_Return DFC_IF
+            Case (sImage="IFNOT")
+                Function_Return DFC_IFNOT
+            Case (sImage="ELSE")
+                Function_Return DFC_ELSE
+            Case (sImage="BEGIN")
+                Function_Return DFC_BEGIN
+            Case (sImage="END")
+                Function_Return DFC_END
+            Case (sImage="BREAK")
+                Function_Return DFC_BREAK
+            Case (sImage="FUNCTION")
+                Function_Return DFC_FUNCTION
+            Case (sImage="PROCEDURE")
+                Function_Return DFC_PROCEDURE
+            Case (sImage="REGISTER_FUNCTION")
+                Function_Return DFC_REGISTER_FUNCTION
+            Case (sImage="REGISTER_PROCEDURE")
+                Function_Return DFC_REGISTER_PROCEDURE
+            Case (sImage="FUNCTION_RETURN")
+                Function_Return DFC_FUNCTION_RETURN
+            Case (sImage="PROCEDURE_RETURN")
+                Function_Return DFC_PROCEDURE_RETURN
+            Case (sImage="END_FUNCTION")
+                Function_Return DFC_END_FUNCTION
+            Case (sImage="END_PROCEDURE")
+                Function_Return DFC_END_PROCEDURE
+            Case (sImage="FORWARD")
+                Function_Return DFC_FORWARD
+            Case (sImage="DELEGATE")
+                Function_Return DFC_DELEGATE
+            Case (sImage="BROADCAST")
+                Function_Return DFC_BROADCAST
+            Case (sImage="SET")
+                Function_Return DFC_SET
+            Case (sImage="GET")
+                Function_Return DFC_GET
+            Case (sImage="SEND")
+                Function_Return DFC_SEND
+            Case (sImage="GET_ATTRIBUTE")
+                Function_Return DFC_GET_ATTRIBUTE
+            Case (sImage="SET_ATTRIBUTE")
+                Function_Return DFC_SET_ATTRIBUTE
+            Case (sImage="SYSDATE")
+                Function_Return DFC_SYSDATE
+            Case (sImage="MOVE")
+                Function_Return DFC_MOVE
+            Case (sImage="CALC")
+                Function_Return DFC_MOVE
+            Case (sImage="ADD")
+                Function_Return DFC_ADD
+            Case (sImage="SUBTRACT")
+                Function_Return DFC_SUBTRACT
+            Case (sImage="INCREMENT")
+                Function_Return DFC_INCREMENT
+            Case (sImage="DECREMENT")
+                Function_Return DFC_DECREMENT
+            Case (sImage="INDICATE")
+                Function_Return DFC_INDICATE
+            Case (sImage="CLOSE")
+                Function_Return DFC_CLOSE
+            Case (sImage="REREAD")
+                Function_Return DFC_REREAD
+            Case (sImage="LOCK")
+                Function_Return DFC_LOCK
+            Case (sImage="UNLOCK")
+                Function_Return DFC_UNLOCK
+            Case (sImage="CLEAR")
+                Function_Return DFC_CLEAR
+            Case (sImage="SAVE")
+                Function_Return DFC_SAVE
+            Case (sImage="SAVERECORD")
+                Function_Return DFC_SAVERECORD
+            Case (sImage="DELETE")
+                Function_Return DFC_DELETE
+            Case (sImage="RELATE")
+                Function_Return DFC_RELATE
+            Case (sImage="ATTACH")
+                Function_Return DFC_ATTACH
+            Case (sImage="FIND")
+                Function_Return DFC_FIND
+            Case (sImage="BEGIN_TRANSACTION")
+                Function_Return DFC_BEGIN_TRANSACTION
+            Case (sImage="END_TRANSACTION")
+                Function_Return DFC_END_TRANSACTION
+            Case (sImage="SHOW")
+                Function_Return DFC_SHOW
+            Case (sImage="SHOWLN")
+                Function_Return DFC_SHOWLN
+            Case (sImage="WRITE")
+                Function_Return DFC_WRITE
+            Case (sImage="WRITELN")
+                Function_Return DFC_WRITELN
+            Case (sImage="WRITE_HEX")
+                Function_Return DFC_WRITE_HEX
+            Case (sImage="READ")
+                Function_Return DFC_READ
+            Case (sImage="READLN")
+                Function_Return DFC_READLN
+            Case (sImage="READ_BLOCK")
+                Function_Return DFC_READ_BLOCK
+            Case (sImage="DIRECT_OUTPUT")
+                Function_Return DFC_DIRECT_OUTPUT
+            Case (sImage="DIRECT_INPUT")
+                Function_Return DFC_DIRECT_INPUT
+            Case (sImage="APPEND_OUTPUT")
+                Function_Return DFC_APPEND_OUTPUT
+            Case (sImage="CLOSE_INPUT")
+                Function_Return DFC_CLOSE_INPUT
+            Case (sImage="CLOSE_OUTPUT")
+                Function_Return DFC_CLOSE_OUTPUT
+            Case (sImage="ERROR")
+                Function_Return DFC_ERROR
+            Case (sImage="SCRIPT_RETURN")
+                Function_Return DFC_SCRIPT_RETURN
+            Case (sImage="LOCAL")
+                Function_Return DFC_LOCAL
+            Case (sImage="GLOBAL_VARIABLE")
+                Function_Return DFC_GLOBAL_VARIABLE
+            Case (sImage="SLEEP")
+                Function_Return DFC_SLEEP
+            Case (sImage="ABORT")
+                Function_Return DFC_ABORT
+        Case End
+        Function_Return DFT_ERROR
+    End_Function
+    // Available scope types (Class, Object, Methods) or Unknown
+    Function Scope_Type_Description Integer iType Returns String
+        Case Begin
+            Case (iType=DFC_CLASS)
+                Function_Return "Class"
+            Case (iType=DFC_OBJECT)
+                Function_Return "Object"
+            Case (iType=DFC_PROCEDURE)
+                Function_Return "Procedure"
+            Case (iType=DFC_SET)
+                Function_Return "Procedure Set"
+            Case (iType=DFC_FUNCTION)
+                Function_Return "Function"
+        Case End
+        Function_Return "* Unknown *"
+    End_Function
+    // Returns keyword or command ID by token Image
+    Function Keyword_ID String sImage Returns Integer
+        Case Begin
+            Case (sImage="GT")
+                Function_Return DFO_GT
+            Case (sImage="GE")
+                Function_Return DFO_GE
+            Case (sImage="LT")
+                Function_Return DFO_LT
+            Case (sImage="LE")
+                Function_Return DFO_LE
+            Case (sImage="EQ")
+                Function_Return DFO_EQ
+            Case (sImage="NE")
+                Function_Return DFO_NE
+            Case (sImage="CONTAINS")
+                Function_Return DFO_CONTAINS
+            Case (sImage="MATCHES")
+                Function_Return DFO_MATCHES
+            Case (sImage="AND")
+                Function_Return DFO_AND
+            Case (sImage="OR")
+                Function_Return DFO_OR
+            Case (sImage="IAND")
+                Function_Return DFO_IAND
+            Case (sImage="IOR")
+                Function_Return DFO_IOR
+            Case (sImage="NOT")
+                Function_Return DFO_NOT
+            Case (sImage="IS")
+                Function_Return DFW_IS
+            Case (sImage="ITEM")
+                Function_Return DFW_ITEM
+            Case (sImage="FIELD")
+                Function_Return DFW_FIELD
+            Case (sImage="FILE_FIELD")
+                Function_Return DFW_FILE_FIELD
+            Case (sImage="A")
+                Function_Return DFW_A
+            Case (sImage="AN")
+                Function_Return DFW_A
+            Case (sImage="AS")
+                Function_Return DFW_AS
+            Case (sImage="BY")
+                Function_Return DFW_BY
+            Case (sImage="GLOBAL")
+                Function_Return DFW_GLOBAL
+            Case (sImage="FOR")
+                Function_Return DFW_FOR
+            Case (sImage="RETURNS")
+                Function_Return DFW_RETURNS
+            Case (sImage="FROM")
+                Function_Return DFW_FROM
+            Case (sImage="TO")
+                Function_Return DFW_TO
+            Case (sImage="OF")
+                Function_Return DFW_OF
+            Case (sImage="CHANNEL")
+                Function_Return DFW_CHANNEL
+            Case (sImage="RECURSIVE")
+                Function_Return DFW_RECURSIVE
+            Case (sImage="RECURSIVE_UP")
+                Function_Return DFW_RECURSIVE_UP
+            Case (sImage="NONSTOP")
+                Function_Return DFW_NOSTOP
+            Case (sImage="RECNUM")
+                Function_Return DFW_RECNUM
+            Case (sImage="INDEX.1")
+                Function_Return DFW_INDEX_1 // Index{.N}
+            Case (sImage="INDEX.2")
+                Function_Return DFW_INDEX_2
+            Case (sImage="INDEX.3")
+                Function_Return DFW_INDEX_3
+            Case (sImage="INDEX.4")
+                Function_Return DFW_INDEX_4
+            Case (sImage="INDEX.5")
+                Function_Return DFW_INDEX_5
+            Case (sImage="INDEX.6")
+                Function_Return DFW_INDEX_6
+            Case (sImage="INDEX.7")
+                Function_Return DFW_INDEX_7
+            Case (sImage="INDEX.8")
+                Function_Return DFW_INDEX_8
+            Case (sImage="INDEX.9")
+                Function_Return DFW_INDEX_9
+            Case (sImage="INDEX.10")
+                Function_Return DFW_INDEX_10
+            Case (sImage="INDEX.11")
+                Function_Return DFW_INDEX_11
+            Case (sImage="INDEX.12")
+                Function_Return DFW_INDEX_12
+            Case (sImage="INDEX.13")
+                Function_Return DFW_INDEX_13
+            Case (sImage="INDEX.14")
+                Function_Return DFW_INDEX_14
+            Case (sImage="INDEX.15")
+                Function_Return DFW_INDEX_15
+            Case (sImage="TRUE")
+                Function_Return DFW_TRUE
+            Case (sImage="FALSE")
+                Function_Return DFW_FALSE
+            Case (sImage="FOUND")
+                Function_Return DFW_FOUND
+            Case (sImage="SEQEOF")
+                Function_Return DFW_SEQEOF
+            Case (sImage="SEQEOL")
+                Function_Return DFW_SEQEOL
+            Case (sImage="ERR")
+                Function_Return DFW_ERR
+            Case (sImage="SELF")
+                Function_Return DFW_SELF
+            Case (sImage="CURRENT_OBJECT")
+                Function_Return DFW_SELF
+            Case (sImage="DF_ALL")
+                Function_Return DFW_DF_ALL
+            Case (sImage="DF_TEMPORARY")
+                Function_Return DFW_DF_TEMPORARY
+            Case (sImage="DF_PERMANENT")
+                Function_Return DFW_DF_PERMANENT
+            Case (sImage="ABS")
+                Function_Return DFF_Abs
+            Case (sImage="ACOS")
+                Function_Return DFF_Acos
+            Case (sImage="APPEND")
+                Function_Return DFF_Append
+            Case (sImage="ASCII")
+                Function_Return DFF_Ascii
+            Case (sImage="ASIN")
+                Function_Return DFF_Asin
+            Case (sImage="ATAN")
+                Function_Return DFF_Atan
+            Case (sImage="CENTER")
+                Function_Return DFF_Center
+            Case (sImage="CHARACTER")
+                Function_Return DFF_Character
+            Case (sImage="COS")
+                Function_Return DFF_Cos
+            Case (sImage="DATE")
+                Function_Return DFF_Date
+            Case (sImage="EVAL")
+                Function_Return DFF_Eval
+            Case (sImage="EXP")
+                Function_Return DFF_Exp
+            Case (sImage="HI")
+                Function_Return DFF_Hi
+            Case (sImage="IF")
+                Function_Return DFF_If
+            Case (sImage="INSERT")
+                Function_Return DFF_Insert
+            Case (sImage="INTEGER")
+                Function_Return DFF_Integer
+            Case (sImage="LEFT")
+                Function_Return DFF_Left
+            Case (sImage="LENGTH")
+                Function_Return DFF_Length
+            Case (sImage="LOG")
+                Function_Return DFF_Log
+            Case (sImage="LOW")
+                Function_Return DFF_Low
+            Case (sImage="LOWERCASE")
+                Function_Return DFF_Lowercase
+            Case (sImage="LTRIM")
+                Function_Return DFF_Ltrim
+            Case (sImage="MID")
+                Function_Return DFF_Mid
+            Case (sImage="MOD")
+                Function_Return DFF_Mod
+            Case (sImage="NOT")
+                Function_Return DFF_Not
+            Case (sImage="NUMBER")
+                Function_Return DFF_Number
+            Case (sImage="OVERSTRIKE")
+                Function_Return DFF_Overstrike
+            Case (sImage="PAD")
+                Function_Return DFF_Pad
+            Case (sImage="POS")
+                Function_Return DFF_Pos
+            Case (sImage="RANDOM")
+                Function_Return DFF_Random
+            Case (sImage="REAL")
+                Function_Return DFF_Real
+            Case (sImage="REMOVE")
+                Function_Return DFF_Remove
+            Case (sImage="REPEAT")
+                Function_Return DFF_Repeat
+            Case (sImage="REPLACE")
+                Function_Return DFF_Replace
+            Case (sImage="REPLACES")
+                Function_Return DFF_Replaces
+            Case (sImage="RIGHT")
+                Function_Return DFF_Right
+            Case (sImage="ROUND")
+                Function_Return DFF_Round
+            Case (sImage="RTRIM")
+                Function_Return DFF_Rtrim
+            Case (sImage="SIN")
+                Function_Return DFF_Sin
+            Case (sImage="SQRT")
+                Function_Return DFF_Sqrt
+            Case (sImage="STRING")
+                Function_Return DFF_String
+            Case (sImage="TAN")
+                Function_Return DFF_Tan
+            Case (sImage="TRIM")
+                Function_Return DFF_Trim
+            Case (sImage="UPPERCASE")
+                Function_Return DFF_Uppercase
+            Case (sImage="CURRENTDATETIME")
+                Function_Return DFF_CurrentDateTime
+            Case (sImage="DATEGETDAY")
+                Function_Return DFF_DateGetDay
+            Case (sImage="DATEGETDAYOFWEEK")
+                Function_Return DFF_DateGetDayofWeek
+            Case (sImage="DATEGETDAYOFYEAR")
+                Function_Return DFF_DateGetDayofYear
+            Case (sImage="DATEGETHOUR")
+                Function_Return DFF_DateGetHour
+            Case (sImage="DATEGETMINUTE")
+                Function_Return DFF_DateGetMinute
+            Case (sImage="DATEGETMONTH")
+                Function_Return DFF_DateGetMonth
+            Case (sImage="DATEGETSECOND")
+                Function_Return DFF_DateGetSecond
+            Case (sImage="DATEGETYEAR")
+                Function_Return DFF_DateGetYear
+            Case (sImage="DATESETDAY")
+                Function_Return DFF_DateSetDay
+            Case (sImage="DATESETHOUR")
+                Function_Return DFF_DateSetHour
+            Case (sImage="DATESETMINUTE")
+                Function_Return DFF_DateSetMinute
+            Case (sImage="DATESETMONTH")
+                Function_Return DFF_DateSetMonth
+            Case (sImage="DATESETSECOND")
+                Function_Return DFF_DateSetSecond
+            Case (sImage="DATESETYEAR")
+                Function_Return DFF_DateSetYear
+            Case (sImage="ISDATEVALID")
+                Function_Return DFF_IsDateValid
+            Case (sImage="SPANDAYS")
+                Function_Return DFF_SpanDays
+            Case (sImage="SPANHOURS")
+                Function_Return DFF_SpanHours
+            Case (sImage="SPANMINUTES")
+                Function_Return DFF_SpanMinutes
+            Case (sImage="SPANSECONDS")
+                Function_Return DFF_SpanSeconds
+            Case (sImage="SPANTOTALDAYS")
+                Function_Return DFF_SpanTotalDays
+            Case (sImage="SPANTOTALHOURS")
+                Function_Return DFF_SpanTotalHours
+            Case (sImage="SPANTOTALMINUTES")
+                Function_Return DFF_SpanTotalMinutes
+            Case (sImage="SPANTOTALSECONDS")
+                Function_Return DFF_SpanTotalSeconds
+            Case (sImage="ADDRESSOF")
+                Function_Return DFF_Addressof
+            Case (sImage="CAST")
+                Function_Return DFF_Cast
+            Case (sImage="CONVERT")
+                Function_Return DFF_Convert
+            Case (sImage="INVOKEXML")
+                Function_Return DFF_InvokeXML
+            Case (sImage="STOREC")
+                Function_Return DFF_Storec
+            Case (sImage="STOREW")
+                Function_Return DFF_Storew
+            Case (sImage="STOREDW")
+                Function_Return DFF_Storedw
+            Case (sImage="DEREFC")
+                Function_Return DFF_Derefc
+            Case (sImage="DEREFW")
+                Function_Return DFF_Derefw
+            Case (sImage="DEREFDW")
+                Function_Return DFF_Derefdw
+            Case (sImage="MEMCOPY")
+                Function_Return DFF_MemCopy
+            Case (sImage="MEMSET")
+                Function_Return DFF_MemSet
+            Case (sImage="ISSAMECOMOBJECT")
+                Function_Return DFF_IsSameCOMObject
+            Case (sImage="ISNULLCOMOBJECT")
+                Function_Return DFF_IsNullCOMObject
+            Case (sImage="NULLCOMOBJECT")
+                Function_Return DFF_NullCOMObject
+            Case (sImage="FINDBYROWID")
+                Function_Return DFF_FindByRowId
+            Case (sImage="GETROWID")
+                Function_Return DFF_GetRowId
+            Case (sImage="NULLROWID")
+                Function_Return DFF_NullRowId
+            Case (sImage="ISNULLROWID")
+                Function_Return DFF_IsNullRowId
+            Case (sImage="ISSAMEROWID")
+                Function_Return DFF_IsSameRowId
+            Case (sImage="SERIALIZEROWID")
+                Function_Return DFF_SerializeRowId
+            Case (sImage="DESERIALIZEROWID")
+                Function_Return DFF_DeSerializeRowId
+            Case (sImage="SIZEOFARRAY")
+                Function_Return DFF_SizeOfArray
+            Case (sImage="RESIZEARRAY")
+                Function_Return DFF_ResizeArray
+            Case (sImage="CSTRINGLENGTH")
+                Function_Return DFF_CStringLength
+            Case (sImage="SIZEOFTYPE")
+                Function_Return DFF_SizeOfType
+            Case (sImage="BINARYSEARCHARRAY")
+                Function_Return DFF_BinarySearchArray
+            Case (sImage="COPYARRAY")
+                Function_Return DFF_CopyArray
+            Case (sImage="COUNTARRAY")
+                Function_Return DFF_CountArray
+            Case (sImage="FILLARRAY")
+                Function_Return DFF_FillArray
+            Case (sImage="MINARRAY")
+                Function_Return DFF_MinArray
+            Case (sImage="MAXARRAY")
+                Function_Return DFF_MaxArray
+            Case (sImage="REVERSEARRAY")
+                Function_Return DFF_ReverseArray
+            Case (sImage="SERACHARRAY")
+                Function_Return DFF_SearchArray
+            Case (sImage="SHUFFLEARRAY")
+                Function_Return DFF_ShuffleArray
+            Case (sImage="SORTARRAY")
+                Function_Return DFF_SortArray
+            Case (sImage="REMOVEFROMARRAY")
+                Function_Return DFF_RemoveFromArray
+            Case (sImage="INSERTINARRAY")
+                Function_Return DFF_InsertInArray
+            Case (sImage="RIGHTPOS")
+                Function_Return DFF_RightPos
+        Case End
+        // In case IF it might be a command
+        Function_Return (Command_ID(Self, sImage))
+    End_Function
+    // Returns Variable type by Command ID provided
+    Function Var_Type Integer iCommand Returns Integer
+        Case Begin
+            Case (iCommand=DFC_STRING)
+                Function_Return DFS_STRING
+            Case (iCommand=DFC_INTEGER)
+                Function_Return DFS_INTEGER
+            Case (iCommand=DFC_NUMBER)
+                Function_Return DFS_NUMBER
+            Case (iCommand=DFC_DATE)
+                Function_Return DFS_DATE
+            Case (iCommand=DFC_DATETIME)
+                Function_Return DFS_DATETIME
+            Case (iCommand=DFC_TIMESPAN)
+                Function_Return DFS_TIMESPAN
+            Case (iCommand=DFC_TIME)
+                Function_Return DFS_TIME
+            Case (iCommand=DFC_REAL)
+                Function_Return DFS_REAL
+            Case (iCommand=DFC_CHAR)
+                Function_Return DFS_CHAR
+            Case (iCommand=DFC_UCHAR)
+                Function_Return DFS_UCHAR
+            Case (iCommand=DFC_SHORT)
+                Function_Return DFS_SHORT 
+            Case (iCommand=DFC_USHORT)
+                Function_Return DFS_USHORT
+            Case (iCommand=DFC_UINTEGER)
+                Function_Return DFS_UINTEGER
+            Case (iCommand=DFC_BIGINT)
+                Function_Return DFS_BIGINT
+            Case (iCommand=DFC_UBIGINT)
+                Function_Return DFS_UBIGINT
+            Case (iCommand=DFC_ADDRESS)
+                Function_Return DFS_ADDRESS
+            Case (iCommand=DFC_ROWID)
+                Function_Return DFS_ROWID
+            Case (iCommand=DFC_VARIANT)
+                Function_Return DFS_VARIANT
+            Case (iCommand=DFC_OPEN)
+                Function_Return DFS_FILE
+            Case (iCommand=DFC_DEFINE)
+                Function_Return DFS_CONSTANT
+        Case End
+        Function_Return DFT_ERROR
+    End_Function
+    // Returns type name by Variable Type ID provided (Debug and Output purposes)
+    Function Var_Type_String Integer iType Returns String
+        Case Begin
+            Case (iType=DFS_STRING)
+                Function_Return "String"
+            Case (iType=DFS_INTEGER)
+                Function_Return "Integer"
+            Case (iType=DFS_NUMBER)
+                Function_Return "Number"
+            Case (iType=DFS_DATE)
+                Function_Return "Date"
+            Case (iType=DFS_DATETIME)
+                Function_Return "DateTime"
+            Case (iType=DFS_TIMESPAN)
+                Function_Return "TimeSpan"
+            Case (iType=DFS_TIME)
+                Function_Return "Time"
+            Case (iType=DFS_REAL)
+                Function_Return "Real"
+            Case (iType=DFS_CHAR)
+                Function_Return "Char"
+            Case (iType=DFS_UCHAR)
+                Function_Return "UChar"
+            Case (iType=DFS_SHORT)
+                Function_Return "Short"
+            Case (iType=DFS_USHORT)
+                Function_Return "UShort"
+            Case (iType=DFS_UINTEGER)
+                Function_Return "UInteger"
+            Case (iType=DFS_BIGINT)
+                Function_Return "BigInt"
+            Case (iType=DFS_UBIGINT)
+                Function_Return "UBigInt"
+            Case (iType=DFS_ADDRESS)
+                Function_Return "Address"
+            Case (iType=DFS_ROWID)
+                Function_Return "RowID"
+            Case (iType=DFS_VARIANT)
+                Function_Return "Variant"
+            Case (iType=DFS_FILE)
+                Function_Return "DBFILE"
+            Case (iType=DFS_CONSTANT)
+                Function_Return "CONST"
+        Case End
+        Function_Return "*UNKNOWN*"
+    End_Function
+    // Returns variable prefix: 
+    //      "|FI"=File item, "|CI"=Constant item, "|VI"=Variable item
+    Function Var_Prefix Integer iType Returns String
+        If (iType=DFS_FILE) Function_Return "|FI"
+        Else If (iType=DFS_CONSTANT) Function_Return "|CI"
+        Function_Return "|VI"
+    End_Function
+    // Returns Dimansion Image (Debug and Output purposes)
+    Function fDFSOutDim Integer iDimension Returns String
+        Function_Return (Repeat("[]", iDimension))
+    End_Function
+    // Prints list of charsets available (Output tables purpose)
+    Procedure PrintCharsets Integer iChannel 
+        Integer iCharSet iCharSets
+        Output  channel   iChannel CHARHDR
+        Move (SizeOfArray(gtDFSCharSets)-1)     to iCharSets
+        For iCharSet from 0 to iCharSets
+            Move gtDFSCharSets[iCharSet].sName  to CHARTBL.1
+            Move gtDFSCharSets[iCharSet].sValue to CHARTBL.2
+            Output channel iChannel                CHARTBL
+        Loop
+        Writeln channel   iChannel dfsCRLF
+    End_Procedure
+    // Prints list of symbols available (Output tables purpose)
+    Procedure PrintSymbols Integer iChannel
+        Integer iSymbol  iSymbols
+        Output  channel  iChannel                      SYMHDR
+        Move (SizeOfArray(gtDFSSymbols)-1)          to iSymbols
+        For iSymbol from 0 to iSymbols
+            Move gtDFSSymbols[iSymbol].iSymbol      to SYMTBL.1
+            Move gtDFSSymbols[iSymbol].sType        to SYMTBL.2
+            Move gtDFSSymbols[iSymbol].sDescription to SYMTBL.3
+            Output channel iChannel                    SYMTBL
+        Loop
+        Writeln channel  iChannel dfsCRLF
+    End_Procedure
+    // Prints list of tokens available (Output tables purpose)
+    Procedure PrintTokens Integer iChannel tDFSToken[] ByRef ltTokens
+        Integer iToken  iTokens
+        Output  channel iChannel               TOKENHDR
+        Move (SizeOfArray(ltTokens))        to iTokens
+        For iToken from 0 to (iTokens-1)
+            Move iToken                     to TOKENTBL.1
+            Move ltTokens[iToken].sFile     to TOKENTBL.2
+            Move ltTokens[iToken].iLine     to TOKENTBL.3
+            Move ltTokens[iToken].iColumn   to TOKENTBL.4
+            Move ltTokens[iToken].iSymbol   to TOKENTBL.5
+            Move ltTokens[iToken].sImage    to TOKENTBL.6
+            Output channel iChannel            TOKENTBL
+        Loop
+        Writeln channel iChannel dfsCRLF
+    End_Procedure
+    // Prints list of variables available (Output tables purpose)
+    Procedure PrintVariables Integer iChannel tDFSVariable[] ByRef ltVariables
+        Integer iVariable iVariables
+        Output channel iChannel VARTBLHDR
+        Move (SizeOfArray(ltVariables)) to iVariables
+        For iVariable from 0 to (iVariables-1)
+            Move (ltVariables[iVariable].sName)     to VARTBL.1
+            Move (ltVariables[iVariable].iScope)    to VARTBL.2
+            Move (Var_Type_String(Self, ltVariables[iVariable].iType)) ;
+                                                    to VARTBL.3
+            Move (fDFSOutDim(Self, ltVariables[iVariable].iDimension)) ;
+                                                    to VARTBL.4
+            Move (ltVariables[iVariable].iLine)     to VARTBL.5
+            Move (ltVariables[iVariable].iColumn)   to VARTBL.6
+            Move (ltVariables[iVariable].iType)     to VARTBL.7
+            Move ((Var_Prefix(Self, ltVariables[iVariable].iType)+String(iVariable))+(If(ltVariables[iVariable].sValue<>"", ","+ltVariables[iVariable].sValue, ""))) ;
+                                                    to VARTBL.8
+            Output channel iChannel                    VARTBL
+        Loop
+        Writeln channel iChannel dfsCRLF
+    End_Procedure
+    // Prints all lists available (Output tables purpose)
+    Procedure DebuggerInfo
+        Integer         iScope iScopes
+        Integer         iChannel 
+        tDFSToken[]     ltTokens
+        tDFSVariable[]  ltVariables
+        tDFSScope[]     ltDFSScopes
+        //
+        Get piPRNChannel to iChannel
+        Direct_Output channel iChannel (psScriptSource(Self)+".tbl")
+        //
+        // Variables
+        Writeln channel iChannel "Variables:"
+        Get ptVariables to ltVariables
+        Send PrintVariables iChannel (&ltVariables)
+        // Scopes
+        Writeln channel iChannel "Scopes:" dfsCRLF
+        Get ptDFSScopes to ltDFSScopes
+        Move (SizeOfArray(ltDFSScopes)-1) to iScopes
+        For iScope from 0 to iScopes
+            If iScope Begin
+                Write channel iChannel "Scope[" iScope "] " ltDFSScopes[iScope].sName " " ltDFSScopes[iScope].iType
+                Write channel iChannel " Arguments=" ltDFSScopes[iScope].iNumArguments 
+                If (ltDFSScopes[iScope].iReturnType) ;
+                    Write channel iChannel " Returns=" (Var_Type_String(Self, ltDFSScopes[iScope].iReturnType)) 
+                If (ltDFSScopes[iScope].iReturnDimension) ;
+                    Write channel iChannel " " (fDFSOutDim(Self, ltDFSScopes[iScope].iReturnDimension))
+                Writeln channel iChannel
+            End
+            Else Writeln channel iChannel "Main Script"
+            Writeln channel iChannel "Tokens [Scope " iScope "]:"
+            Send PrintTokens iChannel (&ltDFSScopes[iScope].atTokens)
+        Loop
+        //
+        // Information for the Reference
+        // -----------------------------
+        // Tokens
+        Writeln channel iChannel "Tokens:"
+        Get ptTokens to ltTokens
+        Send PrintTokens iChannel (&ltTokens)
+        // Char sets
+        Writeln channel iChannel "Charsets:"
+        Send PrintCharsets iChannel
+        // Symbols
+        Writeln channel iChannel "Symbols:"
+        Send PrintSymbols iChannel
+        //
+        Close_Output channel iChannel
+    End_Procedure
+    //
+    // DFS Executable (DE) File Structure:
+    // [VERSION][INFO(File, Date, Time, Copyright)]
+    // [FilesCount][FileTable: MDDLLLLNNFFFF*, ...]*
+    // [ScopeCount][ScopeHeader:TTAARRDDLLNNNN**][SkopeTokens:[TokensCount][TokensTable: SSLLLLCCFFBBBBIIII*, ...]***]
+    // [TokensCount][TokensTable: SSLLLLCCFFBBBBIIII*, ...]***
+    // [VariablesCount][VariablesTable: TTLLLLCCDDBBNNNN*BBBBVVVV*, ...]****
+    //
+    // Notes:
+    // *    MDDLLLLNNFFFF* = File Table Record
+    //      M=Method (Script, USE...)   (BYTE)
+    //      DD=Depth Level              (SHORT, 2)
+    //      LLLL=Line No                (DWORD, 4)
+    //      NN=Size of File Name        (SHORT, 2)
+    //      FFFF*=File Name             (CHAR, Variable)
+    // **   TTAARRDDLLNNNN**
+    //      TT=Scope Type (Function,..) (SHORT, 2)
+    //      AA=No. Arguments            (SHORT, 2)
+    //      RR=Returns Type             (SHORT, 2)
+    //      DD=Return Type Dimension    (SHORT, 2)
+    //      LL=Size of Name             (SHORT, 2)
+    //      NNNN*=Scope Name            (CHAR, Variable)
+    // ***  SSLLLLCCFFBBBBIIII* = Token Table Record
+    //      SS=Symbol                   (SHORT, 2)
+    //      LLLL=Line No                (DWORD, 4)
+    //      CC=Column No                (SHORT, 2)
+    //      FF=File Index               (SHORT, 2), See File Table Record Index
+    //      BBBB=Size of Image          (DWORD, 4)
+    //      IIII*=Image                 (CHAR, Variable)
+    // **** TTLLLLCCDDSSBBNNNN*BBBBVVVV* = Variable Table Record
+    //      TT=Type                     (SHORT, 2)
+    //      LLLL=Line No                (DWORD, 4)
+    //      CC=Column No                (SHORT, 2)
+    //      DD=Dimension                (SHORT, 2)
+    //      SS=Scope Ref.               (SHORT, 2)
+    //      BB=Size of Name             (SHORT, 2)
+    //      NNNN*=Name                  (CHAR, Variable)
+    //      BBBB=Size of Value          (DWORD, 4)
+    //      VVVV*=Value                 (CHAR, Variable)
+    Procedure Save_Executable
+        Integer iChannel iSize
+        String  sSource sExeFile sTmp
+        // Files
+        Integer iFile iFiles
+        tDFSFile[] ltDFSFiles
+        tDFSFile   ltDFSFile
+        // Scopes
+        Integer iScope iScopes
+        tDFSScope[] ltScopes
+        // Tokens
+        Integer iToken iTokens
+        tDFSToken[] ltToken
+        // Variables
+        Integer iVariable iVariables
+        tDFSVariable[] ltVariables
+        //
+        //
+        DateTime dtCompileStart dtCompileStop
+        TimeSpan tsTime
+        Move (CurrentDateTime()) to dtCompileStart
+        //
+        Get psScriptSource to sSource
+        While (sSource contains ".")
+            Move (Left(sSource, Pos('.', sSource))) to sTmp
+            Move (Replace(sTmp, sSource, "")) to sSource
+            Move (sExeFile+sTmp) to sExeFile
+        Loop
+        Move (sExeFile+"de") to sExeFile
+        //
+        Send Add_Compiler_Info 5 ("---- Building"*sExeFile*" ----")
+        //
+        Get piScriptChannel to iChannel
+        Direct_Output channel iChannel sExeFile
+        Writeln channel iChannel DFS_VERSION ": " (psScriptFile(Self)) ", " (dfsCurrentDate(Self)) " " (eval(dfsCurrentTime(Self))) ", (C) " (eval(C_dfsDFRegName))
+        // *** Files ***
+        Get ptDFSFiles to ltDFSFiles
+        Move (SizeOfArray(ltDFSFiles)-1) to iFiles
+        Write channel iChannel (DWORDtoBytes(iFiles))
+        For iFile from 0 to iFiles
+            // New items
+            If (ltDFSFiles[iFile].sMethod="USE") ;
+                Write channel iChannel (Character(1)) // USE
+            Else If (ltDFSFiles[iFile].sMethod="Procedure") ;
+                Write channel iChannel (Character(2)) // 
+            Else If (ltDFSFiles[iFile].sMethod="Procedure Set") ;
+                Write channel iChannel (Character(3)) // 
+            Else If (ltDFSFiles[iFile].sMethod="Function") ;
+                Write channel iChannel (Character(4)) // 
+            Else If (ltDFSFiles[iFile].sMethod="Object") ;
+                Write channel iChannel (Character(5)) // 
+            Else If (ltDFSFiles[iFile].sMethod="Class") ;
+                Write channel iChannel (Character(6)) // 
+            Else ;
+                Write channel iChannel (Character(0)) // SCRIPT[0]/#INCLUDE[N]
+            // Depth
+            Write channel iChannel (SHORTtoBytes(ltDFSFiles[iFile].iDepth))
+            // Line
+            Write channel iChannel (DWORDtoBytes(ltDFSFiles[iFile].iLine))
+            // File Name
+            Write channel iChannel (SHORTtoBytes(Length(ltDFSFiles[iFile].sFileName)))
+            Write channel iChannel (Uppercase(ltDFSFiles[iFile].sFileName))
+        Loop
+        //
+        // *** Scopes ***
+        Get ptDFSScopes to ltScopes
+        Move (SizeOfArray(ltScopes)-1) to iScopes
+        Write channel iChannel (DWORDtoBytes(iScopes))
+        For iScope from 0 to iScopes
+            Write channel iChannel (SHORTtoBytes(ltScopes[iScope].iType))
+            Write channel iChannel (SHORTtoBytes(ltScopes[iScope].iNumArguments))
+            Write channel iChannel (SHORTtoBytes(ltScopes[iScope].iReturnType))
+            Write channel iChannel (SHORTtoBytes(ltScopes[iScope].iReturnDimension))
+            Write channel iChannel (DWORDtoBytes(Length(ltScopes[iScope].sName)))
+            Write channel iChannel ltScopes[iScope].sName
+            Move (SizeOfArray(ltScopes[iScope].atTokens)-1) to iTokens
+            Write channel iChannel (DWORDtoBytes(iTokens))
+            For iToken from 0 to iTokens
+                Write channel iChannel (SHORTtoBytes(ltScopes[iScope].atTokens[iToken].iSymbol))
+                Write channel iChannel (DWORDtoBytes(ltScopes[iScope].atTokens[iToken].iLine))
+                Write channel iChannel (SHORTtoBytes(ltScopes[iScope].atTokens[iToken].iColumn))
+                Move (Uppercase(ltScopes[iScope].atTokens[iToken].sFile)) to ltDFSFile.sFileName
+                Write channel iChannel (SHORTtoBytes(SearchArray(ltDFSFile, ltDFSFiles))) // File Index
+                Write channel iChannel (DWORDtoBytes(Length(ltScopes[iScope].atTokens[iToken].sImage)))
+                Write channel iChannel ltScopes[iScope].atTokens[iToken].sImage
+            Loop
+        Loop
+        //
+        // *** Variables ***
+        Get ptVariables to ltVariables
+        Move (SizeOfArray(ltVariables)-1) to iVariables
+        Write channel iChannel (DWORDtoBytes(iVariables))
+        For iVariable from 0 to iVariables
+            Write channel iChannel (SHORTtoBytes(ltVariables[iVariable].iType))
+            Write channel iChannel (DWORDtoBytes(ltVariables[iVariable].iLine))
+            Write channel iChannel (SHORTtoBytes(ltVariables[iVariable].iColumn))
+            Write channel iChannel (SHORTtoBytes(ltVariables[iVariable].iDimension))
+            Write channel iChannel (SHORTtoBytes(ltVariables[iVariable].iScope))
+            Write channel iChannel (SHORTtoBytes(Length(ltVariables[iVariable].sName)))
+            Write channel iChannel ltVariables[iVariable].sName
+            Write channel iChannel (DWORDtoBytes(Length(ltVariables[iVariable].sValue)))
+            Write channel iChannel ltVariables[iVariable].sValue
+        Loop
+        //Writeln channel iChannel
+        Close_Output channel iChannel
+        //
+        Move (CurrentDateTime()) to dtCompileStop
+        Move (dtCompileStop-dtCompileStart) to tsTime
+        Set ptsCompileTime to tsTime
+        //
+        Send Add_Compiler_Info 1 ("Build Time    : "+(String(DateGetMinute(tsTime))+'m'*String(DateGetSecond(tsTime))+'s'*String(DateGetMillisecond(tsTime))+"ms"))
+        Send Add_Compiler_Info 4 ("---- Executable"*sExeFile*"Built ----")
+    End_Procedure
+    // Reads script executable file (.DE) and loads data
+    Procedure Load_Executable String sExeFile
+        String          sBuffer sVersion
+        Integer         iChannel iLength
+        Integer         iToken iTokens iVariable iVariables iFile iFiles iMethod
+        Integer         iScope iScopes
+        String[]        lsaFiles
+        tDFSFile[]      ltDFSFiles
+        tDFSToken[]     ltDFSTokens
+        tDFSVariable[]  ltDFSVariables
+        tDFSScope[]     ltDFSScopes
+        //
+        Set piObjectsCount to 0
+        //
+        DateTime dtCompileStart dtCompileStop
+        TimeSpan tsTime
+        Move (CurrentDateTime()) to dtCompileStart
+        //
+        Send Add_Compiler_Info 0 ("---- Loading"*sExeFile*" ----")
+        //
+        Get piScriptChannel to iChannel
+        Direct_Input channel iChannel ("Binary:"*sExeFile)
+        If (SeqEof) Begin
+            Close_Input channel iChannel
+            Procedure_Return // Unexpected End-Of-File
+        End
+        Read_Block channel iChannel sVersion 6
+        // If (sVersion>DFS_VERSION)
+        // Read Script General Info
+        Readln channel iChannel
+        // *** Files ***
+        Read_Block channel iChannel sBuffer 4
+        Move (BytesToDWORD(sBuffer, 1)) to iFiles
+        For iFile from 0 to iFiles
+            Read_Block channel iChannel sBuffer 9
+            // Method
+            Move (Ascii(Left(sBuffer, 1))) to iMethod
+            If (iFile=0)        Move "Script"           to ltDFSFiles[iFile].sMethod
+            Else If (iMethod=1) Move "USE"              to ltDFSFiles[iFile].sMethod
+            Else If (iMethod=2) Move "Procedure"        to ltDFSFiles[iFile].sMethod
+            Else If (iMethod=3) Move "Procedure Set"    to ltDFSFiles[iFile].sMethod
+            Else If (iMethod=4) Move "Function"         to ltDFSFiles[iFile].sMethod
+            Else If (iMethod=5) Move "Object"           to ltDFSFiles[iFile].sMethod
+            Else If (iMethod=6) Move "Class"            to ltDFSFiles[iFile].sMethod
+            Else                Move "#INCLUDE"         to ltDFSFiles[iFile].sMethod
+            // Depth
+            Move (BytesToSHORT(sBuffer, 2))     to ltDFSFiles[iFile].iDepth
+            // Line
+            Move (BytesToDWORD(sBuffer, 4))     to ltDFSFiles[iFile].iLine
+            // File Name
+            Move (BytesToSHORT(sBuffer, 8))     to iLength
+            Read_Block channel iChannel sBuffer iLength
+            Move (Uppercase(sBuffer))           to lsaFiles[iFile]
+            Move sBuffer                        to ltDFSFiles[iFile].sFileName
+        Loop
+        //
+        // *** Scopes ***
+        Read_Block channel iChannel sBuffer 4
+        Move (BytesToDWORD(sBuffer, 1)) to iScopes
+        For iScope from 0 to iScopes
+            // Scope Header
+            Read_Block channel iChannel sBuffer 12
+            Move (BytesToSHORT(sBuffer, 1)) to ltDFSScopes[iScope].iType
+            Move (BytesToSHORT(sBuffer, 3)) to ltDFSScopes[iScope].iNumArguments
+            Move (BytesToSHORT(sBuffer, 5)) to ltDFSScopes[iScope].iReturnType
+            Move (BytesToSHORT(sBuffer, 7)) to ltDFSScopes[iScope].iReturnDimension
+            Move (BytesToDWORD(sBuffer, 9)) to iLength
+            Read_Block channel iChannel sBuffer iLength
+            Move sBuffer                    to ltDFSScopes[iScope].sName
+            // Scope tokens
+            Read_Block channel iChannel sBuffer 4
+            Move (BytesToDWORD(sBuffer, 1)) to iTokens
+            For iToken from 0 to iTokens
+                Read_Block channel iChannel sBuffer 14
+                Move (BytesToSHORT(sBuffer, 1))     to ltDFSScopes[iScope].atTokens[iToken].iSymbol
+                Move (BytesToDWORD(sBuffer, 3))     to ltDFSScopes[iScope].atTokens[iToken].iLine
+                Move (BytesToSHORT(sBuffer, 7))     to ltDFSScopes[iScope].atTokens[iToken].iColumn
+                Move (BytesToSHORT(sBuffer, 9))     to iLength
+                Move lsaFiles[iLength]              to ltDFSScopes[iScope].atTokens[iToken].sFile
+                Move (BytesToDWORD(sBuffer, 11))    to iLength
+                Read_Block channel iChannel sBuffer iLength
+                Move sBuffer                        to ltDFSScopes[iScope].atTokens[iToken].sImage
+            Loop
+            // Post processing (Object count is used for the EXE to create Actual Application Objects)
+            If (ltDFSScopes[iScope].iType=DFC_OBJECT) ;
+                Set piObjectsCount          to (piObjectsCount(Self)+1)
+        Loop
+
+        // *** Variables ***
+        Read_Block channel iChannel sBuffer 4
+        Move (BytesToDWORD(sBuffer, 1)) to iVariables
+        For iVariable from 0 to iVariables
+            Read_Block channel iChannel sBuffer 14
+            Move (BytesToSHORT(sBuffer, 1))     to ltDFSVariables[iVariable].iType
+            Move (BytesToDWORD(sBuffer, 3))     to ltDFSVariables[iVariable].iLine
+            Move (BytesToSHORT(sBuffer, 7))     to ltDFSVariables[iVariable].iColumn
+            Move (BytesToSHORT(sBuffer, 9))     to ltDFSVariables[iVariable].iDimension
+            Move (BytesToSHORT(sBuffer, 11))    to ltDFSVariables[iVariable].iScope
+            Move (BytesToSHORT(sBuffer, 13))    to iLength
+            Read_Block channel iChannel sBuffer iLength
+            Move sBuffer                        to ltDFSVariables[iVariable].sName
+            Read_Block channel iChannel sBuffer 4
+            Move (BytesToDWORD(sBuffer, 1))     to iLength
+            If iLength Begin
+                Read_Block channel iChannel sBuffer iLength
+                Move sBuffer                    to ltDFSVariables[iVariable].sValue
+            End
+        Loop
+        Close_Input channel iChannel
+        //
+        Set ptTokens     to ltDFSTokens
+        Set ptVariables  to ltDFSVariables
+        Set ptDFSFiles   to ltDFSFiles
+        Set ptDFSScopes  to ltDFSScopes
+        Move ltDFSScopes to gtDFSScopes
+        //
+        Move (CurrentDateTime()) to dtCompileStop
+        Move (dtCompileStop-dtCompileStart) to tsTime
+        Set ptsCompileTime to tsTime
+        //
+        Send Add_Compiler_Info 1 ("Load Time    : "+(String(DateGetMinute(tsTime))+'m'*String(DateGetSecond(tsTime))+'s'*String(DateGetMillisecond(tsTime))+"ms"))
+        Send Add_Compiler_Info 4 ("---- Executable"*sExeFile*"Loaded ----")
+        //
+    End_Procedure
+End_Class
+
+// DFScriptor Builder Class
+Class cDFScriptorBuilder is a cDFScriptorBase
+    // Adds new token into the list of tokens
+    Procedure Set Token Integer iType String sImage String sFile Integer iErrLine Integer iColumn
+        tDFSToken[] ltToken
+        Integer     iToken iCommand
+        Get   ptTokens              to ltToken
+        Move (SizeOfArray(ltToken)) to iToken
+        //
+        If (iType=DFT_COMMAND) Begin
+            Get Command_ID sImage to iCommand
+            If (iCommand<>DFT_ERROR) Begin
+                Move iCommand to iType
+                Set piCommandsCount to (piCommandsCount(Self)+1)
+            End
+            Else Send Add_Error_Info 4298 iErrLine 0 ("Command not found"*sImage) sFile
+        End
+        Else If (iType=DFT_DIRECTIVE) Begin
+            Set piDirectivesCount to (piDirectivesCount(Self)+1)
+        End
+        //
+        Move  iType                 to ltToken[iToken].iSymbol
+        Move  sImage                to ltToken[iToken].sImage
+        Move  sFile                 to ltToken[iToken].sFile
+        Move  iErrLine              to ltToken[iToken].iLine
+        Move  iColumn               to ltToken[iToken].iColumn
+        Set   ptTokens              to ltToken
+        Set   piLinesCount          to iErrLine
+        Set   piTokensCount         to (iToken+1)
+    End_Procedure
+    // Returns token image by token index
+    Function Token Integer iToken Returns String
+        tDFSToken[] ltTokens
+        Get ptTokens to ltTokens
+        Function_Return ltTokens[iToken].sImage
+    End_Function
+    // Evaluates expression if found
+    Function Process_Compiler_Expression Integer ByRef iToken Returns String
+        Integer iSymbol iTokens iBrOpen iBrClose iString
+        String sExpression sValue sIndex
+        tDFSToken[] ltTokens
+        Get ptTokens to ltTokens
+        Move (SizeOfArray(ltTokens)) to iTokens
+        Increment iBrOpen
+        Move ltTokens[iToken].sImage to sExpression
+        While ((iSymbol<>DFT_NEWLINE)and(iToken<iTokens))
+            Increment iToken
+            Move ltTokens[iToken].iSymbol to iSymbol
+            Move ltTokens[iToken].sImage  to sValue
+            If (iSymbol=DFS_STRING)   Move 1 to iString
+            If (iSymbol=DFT_EXPSTART) Increment iBrOpen
+            If (iSymbol=DFT_EXPSTOP)  Increment iBrClose
+            If (iSymbol=DFT_ID) Begin
+                Get Var_Find sValue to sIndex
+                If (sIndex<>"") Get Var_Value sIndex (&iToken) to sValue
+                Else Move (ltTokens[iToken].sImage) to sValue // ToDo: Func in Exp!
+            End
+            Move (sExpression+sValue) to sExpression
+            If (iBrOpen=iBrClose) Move DFT_NEWLINE to iSymbol
+        Loop
+        Move (Eval(sExpression)) to sExpression
+        If (iString) Move ('"'+sExpression+'"') to sExpression
+        Function_Return sExpression
+    End_Function
+    //
+    // Initializes constant value at the point of defining (Define C_ for "Value")
+    Procedure Init_Constant String sConstant String sValue
+        Integer iIndex
+        tDFSVariable[] ltVariables
+        Get ptVariables to ltVariables
+        Move (Right(sConstant, Length(sConstant)-3)) to iIndex
+        If (ltVariables[iIndex].iType<>DFS_CONSTANT) Procedure_Return
+        Move sValue to ltVariables[iIndex].sValue
+        Set ptVariables to ltVariables
+    End_Procedure
+    // Assigns value to the variable (Variable should be passed as an Index with prefix, eg. |VI23)
+    Procedure Set Var_Value String sVariable Integer ByRef iToken String sValue //Integer iErrLine
+        Integer iIndex
+        tDFSVariable[] ltVariables
+        Get ptVariables to ltVariables
+        Move (Right(sVariable, Length(sVariable)-3)) to iIndex
+        If (ltVariables[iIndex].iType=DFS_CONSTANT) Begin
+            // iErrLine
+            Send Add_Error_Info 91 gtDFSTokens[iToken].iLine 0 ("Attempt to put into constant" * ltVariables[iIndex].sName) gtDFSTokens[iToken].sFile
+            Error 91 ("Constant" * ltVariables[iIndex].sName)
+            Procedure_Return
+        End
+        Move sValue to ltVariables[iIndex].sValue
+        Set ptVariables to ltVariables
+    End_Procedure
+    // Returns value of the variable (Variable should be passed as an Index with prefix, eg. |VI23)
+    Function Var_Value String sVariable Integer ByRef iToken Returns String
+        Integer iType iIndex
+        String  sValue
+        tDFSVariable[] ltVariables
+        tDFSVariable ltVariable
+        String sPrefix
+        Get ptVariables to ltVariables
+        Move (Right(sVariable, Length(sVariable)-3)) to iIndex
+        Move ltVariables[iIndex].iType to iType
+        Move ltVariables[iIndex].sValue to sValue
+        Case Begin
+            Case (iType=DFS_STRING)
+                If ((Left(sValue, 1)<>'"')and(Left(sValue, 1)<>"'")) ;
+                    Move ('"'+sValue+'"') to sValue
+                Function_Return sValue
+            Case (iType=DFS_INTEGER) 
+                Function_Return (Integer(sValue))
+            Case (iType=DFS_NUMBER) 
+                Function_Return (Number(sValue))
+            Case (iType=DFS_DATE) 
+                Function_Return (Date(sValue))
+            Case (iType=DFS_REAL) 
+                Function_Return (Real(sValue))
+            Case (iType=DFS_ADDRESS) 
+                Function_Return (Integer(sValue))
+            Case (iType=DFS_FILE) 
+                Function_Return (Integer(sValue))
+            Case (iType=DFS_ROWID) 
+                Function_Return "?"
+        Case End
+        Function_Return sValue
+    End_Function
+    // Function to properly allocate Global and Local variables for the scopes
+    //     All Global Variables
+    //     All Local  Variables
+    Function CompareVarInternal tDFSVariable ltVariable tDFSVariable ltSearch Returns Integer
+        If ((ltSearch.sName=ltVariable.sName)and(ltVariable.iScope=DFS_DESKTOP)) ;
+            Function_Return (EQ)
+        If ((ltSearch.sName=ltVariable.sName)and(ltVariable.iScope=ltSearch.iScope)) ;
+            Function_Return (EQ)
+        Function_Return (NE)
+    End_Function
+    Function IsDatabaseFile String sImage Returns Integer
+        tDFSDataFiles   ltDFSDataFiles
+        Move sImage  to ltDFSDataFiles.sFileName
+        Function_Return (SearchArray(ltDFSDataFiles, gtDFSDataFiles))
+    End_Function
+    // Adds new variable into the storage of variables
+    Function Var_Register Integer iType Integer iDimension String sName Integer iLine Integer iColumn Returns String
+        Integer iVariable iCheck iFileIndex
+        tDFSVariable[] ltVariables
+        tDFSVariable   ltVariable
+        tDFSDataFiles ltDFSDataFiles
+        String sPrefix
+        Get ptVariables to ltVariables
+        Move DFS$CURRENT$SCOPE to ltVariable.iScope
+        Move sName to ltVariable.sName
+        Move (SearchArray(ltVariable, ltVariables, Self, RefFunc(CompareVarInternal) )) to iCheck
+        If (iCheck<>-1) Begin
+            If (ltVariables[iCheck].iType<>DFS_CONSTANT) ;
+                Send Add_Error_Info 4345 iLine iColumn ("Type check error" * sName +", should not be defined") ""
+            Get Var_Prefix ltVariables[iCheck].iType to sPrefix
+            Function_Return (sPrefix+String(iCheck))
+        End
+        Else Begin
+            Get Var_Prefix iType to sPrefix
+            Move (SizeOfArray(ltVariables)) to iVariable
+            Move DFS$CURRENT$SCOPE to ltVariables[iVariable].iScope
+            Move sName      to ltVariables[iVariable].sName
+            Move iType      to ltVariables[iVariable].iType
+            Move iLine      to ltVariables[iVariable].iLine
+            Move iColumn    to ltVariables[iVariable].iColumn
+            Move iDimension to ltVariables[iVariable].iDimension
+            If (iType=DFS_FILE) Begin
+                Get IsDatabaseFile sName to iFileIndex
+                If (iFileIndex>-1) Begin
+                    Move (gtDFSDataFiles[iFileIndex].iFileNumber) to ltVariables[iVariable].sValue
+                    Open  gtDFSDataFiles[iFileIndex].iFileNumber
+                End
+            End
+            If (iType=DFS_CONSTANT) ;
+            Set piConstantsCount to (piConstantsCount(Self)+1)
+            Else                    ;
+            Set piVariablesCount to (piVariablesCount(Self)+1)
+            Set ptVariables to ltVariables
+        End
+        Function_Return (sPrefix+String(iVariable))
+    End_Function
+    // Finds variable by image and returns prefixed variable index (ge. "iTest" >> "|VI73")
+    Function Var_Find String sVariable Returns String
+        Integer iVariable iCheck
+        tDFSVariable[] ltVariables
+        tDFSVariable ltVariable
+        String sPrefix
+        Get ptVariables to ltVariables
+        Move DFS$CURRENT$SCOPE to ltVariable.iScope
+        Move sVariable to ltVariable.sName
+        Move (SearchArray(ltVariable, ltVariables, Self, RefFunc(CompareVarInternal) )) to iCheck
+        If (iCheck<>-1) Begin
+            Get Var_Prefix ltVariables[iCheck].iType to sPrefix
+            Function_Return (sPrefix+String(iCheck))
+        End
+        Function_Return ""
+    End_Function
+    // Defines new variable
+    Function Process_Variable Integer iVarType Integer iDimension Integer iToken tDFSToken[] ByRef ltTokens Returns Integer
+        String sVariable sIndex
+        If (ltTokens[iToken].iSymbol=DFT_ID) ;
+            Get Var_Register iVarType iDimension (ltTokens[iToken].sImage) (ltTokens[iToken].iLine) (ltTokens[iToken].iColumn) to sVariable
+        Function_Return iToken
+    End_Function
+    // Defines new constant and initializes the value of necessary
+    Function Process_Constant Integer iToken tDFSToken[] ByRef ltTokens Returns Integer
+        String sConstant sIndex sValue
+        Integer iLineToken iStartToken
+        // ?Define? C_CONSTANT For <value>
+        // C_CONSTANT
+        Move iToken to iStartToken
+        Move 1 to iLineToken
+        Increment iToken
+        Get Var_Register DFS_CONSTANT 0 (ltTokens[iLineToken].sImage) (ltTokens[iLineToken].iLine) (ltTokens[iLineToken].iColumn) to sConstant
+        //
+        If (ltTokens[iLineToken+1].iSymbol=DFW_FOR) Begin
+            // For
+            Increment iLineToken
+            Increment iToken
+            // Value
+            Increment iLineToken
+            Increment iToken
+            If (ltTokens[iLineToken].iSymbol=DFT_ID) Begin
+                Get Var_Find ltTokens[iLineToken].sImage to sIndex
+                If (sIndex<>"") Get Var_Value sIndex (&iToken) to sValue
+                Else Move (Eval(ltTokens[iLineToken].sImage)) to sValue
+            End
+            Else If (ltTokens[iLineToken].iSymbol=DFT_EXPSTART) Begin
+                Get Process_Compiler_Expression (&iToken) to sValue
+            End
+            Else Move (ltTokens[iLineToken].sImage) to sValue
+            Send Init_Constant sConstant sValue
+        End
+        // Return new token
+        Function_Return (iToken-iStartToken)
+    End_Function
+    // Returns current type dimension (eg. "aiTest[4][1]"=2, "sNames[]"=1 etc.)
+    Function Type_Dimension Integer ByRef iToken Integer ByRef iScriptToken tDFSToken[] ByRef ltTokens Returns Integer
+        Integer iDimension iDimCount iSymbol
+        If (ltTokens[iToken+1].iSymbol=DFT_DIMSTART) Begin
+            While ((iSymbol<>DFT_NEWLINE)and(iSymbol<>DFT_ID))
+                Increment iToken
+                Increment iScriptToken
+                Move ltTokens[iToken].iSymbol to iSymbol
+                If (iSymbol=DFT_DIMSTART) Begin
+                    Increment iDimension
+                    Increment iDimCount
+                End
+                If (iSymbol=DFT_DIMSTOP) Decrement iDimCount
+                If (iDimCount<>0) Move DFT_ERROR to iSymbol // Skip VAR|CONST|EXPR
+            Loop
+            If ((iDimension) and (iDimCount<>0)) Send Add_Error_Info 500 ltTokens[iToken].iLine 0 ("Invalid Array Declaration" * ltTokens[iToken].sImage) ltTokens[iToken].sFile
+        End
+        Function_Return iDimension
+    End_Function
+    // Declares Variables/Constants
+    //
+    // Integer iVar1 iVar2 iVar3    = "|VI0", "|VI1", "|VI2"
+    // Open Customer                = "|FI3,25" etc, where 25=Customer.File_Number
+    // Define C_SCRIPT for 1        = "|CI4,1", where 1 is constant value
+    //
+    // Type        Opt. Dim.    List of Vars
+    // <VARDECLARE>[DIMENSIONS] <ID1>[ID2][ID3]..[IDN]{EOL}
+    // <VARDECLARE>=STRING|INTEGER|NUMBER|DATE|DATETIME|TIMESPAN|TIME|REAL|CHAR|UCHAR|SHORT|USHORT|UINTEGER|BIGINT|UBIGINT|ADDRESS|ROWID|VARIANT|OPEN|DEFINE
+    // [DIMENSIONS]=[]|[][]|[][][]...|[1]|[1][2]...
+    Procedure Register_Variables Integer ByRef iScriptToken tDFSToken[] ByRef ltTokens
+        Integer iToken   iTokens    iSymbol 
+        Integer iVarType iDimension iDimCount
+        //
+        Move (SizeOfArray(ltTokens)-1) to iTokens
+        //
+        For iToken from 0 to iTokens
+            Move ltTokens[iToken].iSymbol to iSymbol
+            If (iSymbol<>DFT_NEWLINE) Begin
+                //
+                If ((iSymbol>=DFC_STRING)and(iSymbol<=DFC_DEFINE)) Begin
+                    // Type of Variables to be declared/registered
+                    Get Var_Type iSymbol to iVarType
+                    If (iVarType=DFT_ERROR) Send Add_Error_Info 500 ltTokens[iToken].iLine 0 ("Invalid variable declaration" * ltTokens[iToken].sImage) ltTokens[iToken].sFile
+                    // Possible dimension in case of Array(s)
+                    If (ltTokens[iToken+1].iSymbol=DFT_DIMSTART) ;
+                        Get Type_Dimension iToken (&iScriptToken) (&ltTokens) to iDimension
+                End
+                //
+                If (iSymbol=DFT_ID) Begin
+                    If ((iVarType<>0)and(iVarType<>DFT_ERROR)) Begin
+                        If (iVarType<>DFS_CONSTANT) Get Process_Variable iVarType iDimension iToken (&ltTokens) to iToken
+                        Else Get Process_Constant iScriptToken (&ltTokens) to iToken
+                    End
+                End // String - iSymbol - Constant
+            End // NewLine detected
+            //
+        Loop
+        //
+    End_Procedure
+    Function IsFileField String sImage Returns Integer
+        String sFile sField
+        Integer iFile
+        If (Pos('.', sImage)=0) Function_Return 0
+        Move (Left(sImage, Pos('.', sImage)))   to sFile
+        Move (Replaces(sFile, sImage, ""))      to sField
+        Move (Left(sFile, Length(sFile)-1))     to sFile
+        Get IsDatabaseFile sFile to iFile
+        If (sField="FILE_NUMBER") Begin
+            Move gtDFSDataFiles[iFile].iFileNumber to iFile
+            Function_Return (-iFile)
+        End
+        Function_Return (iFile>0)
+    End_Function
+    // Validates ID token (DFT_ID) if not identified, returns 0
+    Function Validate_ID String sImage Returns Integer
+        Integer iIDOK
+        Send ignore_error to error_info_object 51
+        Send ignore_error to error_info_object 54
+        Send ignore_error to error_info_object 4367
+        //
+        If (eval(sImage)<>sImage) Move 1 to iIDOK // Value
+        If ((not(iIDOK))and(eval("GET_"+sImage)<>("GET_"+sImage))) Move 2 to iIDOK // Function ID
+        If ((not(iIDOK))and(eval("SET_"+sImage)<>("SET_"+sImage)))  Move 3 to iIDOK // Procedure Set ID
+        If ((not(iIDOK))and(eval("MSG_"+sImage)<>("MSG_"+sImage)))  Move 4 to iIDOK // Procedure ID
+        If ((not(iIDOK))and(eval("("+sImage+"(Self))")<>("("+sImage+"(Self))"))) Move 5 to iIDOK // Object Ref. ID
+        //
+        Send trap_error to error_info_object 51
+        Send trap_error to error_info_object 54
+        Send trap_error to error_info_object 4367
+        Function_Return iIDOK
+    End_Function
+    // Adds parsed line tokens into the processed scope tokens list
+    // Scope is the actual code to be executed, therefore, in line with this process
+    // we separate out and remove noise lines.
+    // Noise lines are lines like Tags ({}), Variable declarations (Since they are registered),
+    // Include file commands (USE/#INCLUDE), Open command (since file declared and opened),
+    // END* scope commands (which identify end of scope), scope start commands (since scope is 
+    // started) etc etc. So roughly speaking, any lines that are not required for the script 
+    // execution purposes.
+    // Lists of unprocessed tokens are collected for the Debug and Output purposes only.
+    Procedure RegisterTokens tDFSToken[] ByRef ltLineTokens Integer iDepth
+        tDFSToken[] ltToken
+        //tDFSToken[] ltVarToken
+        tDFSScope   ltScope
+        Integer     iToken iItem iLineTokens iCommand iScriptToken iSymbol iFileField iScopeID
+        Integer     iDimToken iDimension iBlockStart
+        Integer     iScopeToken iScopeArguments iScopeVarType iScopeDimension iScopeVarSymbol iScopeClass
+        Integer     iNoiseLine iBaseToken iIDOK
+        String      sName sVariable sScopeVariable sMethodType sMethodPrefix sMethodName
+        If (SizeOfArray(gtDFSScopes)=0) Move "" to gtDFSScopes[0].sName
+        Get   ptTokens              to ltToken
+        Move (SizeOfArray(ltToken)) to iToken
+        Move iToken to iScriptToken
+        Move (SizeOfArray(ltLineTokens)-1) to iLineTokens
+        Move ltLineTokens[0].iSymbol to iSymbol
+        Move 0 to iBaseToken
+        For iItem from 0 to iLineTokens
+            //
+            Move "" to sVariable
+            //
+            If (ltLineTokens[iItem].iSymbol=DFT_DIRECTIVE) ;
+                If (ltLineTokens[iItem].sImage="#INCLUDE") Move 1 to iNoiseLine
+            Else If (ltLineTokens[iItem].iSymbol=DFT_TAGSTART) Move 1 to iNoiseLine
+            Else If (ltLineTokens[iItem].iSymbol=DFT_COMMAND) Begin
+                Get Command_ID ltLineTokens[iItem].sImage to iCommand
+                If (iCommand<>DFT_ERROR) Begin
+                    If ((iCommand=DFC_GLOBAL_VARIABLE)or(iCommand=DFC_LOCAL)) Begin
+                        Move iCommand                    to ltToken[iToken].iSymbol
+                        Move ltLineTokens[iItem].sFile   to ltToken[iToken].sFile
+                        Move ltLineTokens[iItem].sImage  to ltToken[iToken].sImage
+                        Move ltLineTokens[iItem].iLine   to ltToken[iToken].iLine
+                        Move ltLineTokens[iItem].iColumn to ltToken[iToken].iColumn
+                        Increment iToken
+                        Increment iItem // Go to next line
+                        Get Command_ID ltLineTokens[iItem].sImage to iCommand
+                        Move iItem to iBaseToken
+                    End
+                    Move iCommand to ltLineTokens[iItem].iSymbol
+                    Set piCommandsCount to (piCommandsCount(Self)+1)
+                    If (iCommand=DFC_USE) Move 1 to iNoiseLine
+                    If ((iCommand>=DFC_STRING)and(iCommand<=DFC_DEFINE)) Move 1 to iNoiseLine
+                    If ((iCommand=DFC_END_FUNCTION)or(iCommand=DFC_END_PROCEDURE)) Move 1 to iNoiseLine
+                    If ((iCommand=DFC_END_OBJECT)or(iCommand=DFC_END_CLASS)) Move 1 to iNoiseLine
+                    If (iCommand=DFC_OPEN) Move 0 to iNoiseLine
+                End
+                Else Send Add_Error_Info 4298 ltLineTokens[iItem].iLine 0 ("Command not found"*ltLineTokens[iItem].sImage) ltLineTokens[iItem].sFile
+                // Scope control
+                If ((iCommand>=DFC_WHILE)and(iCommand<=DFC_CLASS))      Begin
+                    Set piScopeStartCount   to (piScopeStartCount(Self)+1)
+                    If (iCommand<=DFC_BEGIN) Begin
+                        Move (SizeOfArray(gtDFSScopes[DFS$CURRENT$SCOPE].atTokens)) to ;
+                              giDFSBlockStack[SizeOfArray(giDFSBlockStack)]
+                    End
+                End
+                If ((iCommand>=DFC_LOOP)and(iCommand<=DFC_END_CLASS))   Begin
+                    Set piScopeStopCount    to (piScopeStopCount(Self)+1)
+                    If (iCommand<=DFC_END) Begin
+                        Move (SizeOfArray(gtDFSScopes[DFS$CURRENT$SCOPE].atTokens))           to iScopeToken
+                        Move  giDFSBlockStack[SizeOfArray(giDFSBlockStack)-1]                 to iBlockStart
+                        Move (ResizeArray(giDFSBlockStack, (SizeOfArray(giDFSBlockStack)-1))) to giDFSBlockStack
+                        Move (gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iBlockStart].sImage+"$"+String(iScopeToken)) to ;
+                              gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iBlockStart].sImage
+                    End
+                End
+                // Procedures and Functions
+                If ((iCommand=DFC_FUNCTION)or(iCommand=DFC_PROCEDURE)) Begin
+                    Move (If(iCommand=DFC_FUNCTION, "Function", "Procedure")) to sMethodType
+                    If (iCommand=DFC_FUNCTION)  Move "GET" to sMethodPrefix
+                    If (iCommand=DFC_PROCEDURE) Move "MSG" to sMethodPrefix
+                    If (ltLineTokens[iItem+1].sImage="SET") Begin
+                        Move "Procedure Set" to sMethodType
+                        Move "SET" to sMethodPrefix
+                        Move DFC_SET to iCommand
+                        Increment iItem
+                    End
+                    Send Add_Method_Info ltLineTokens[iItem+1].sImage sMethodType (iDepth+1) ltLineTokens[iItem].iLine
+                    Set piMethodsCount to (piMethodsCount(Self)+1)
+                    Move (SizeOfArray(gtDFSScopes))   to DFS$CURRENT$SCOPE
+                    Move (sMethodPrefix+'_'+ltLineTokens[iItem+1].sImage) to gtDFSScopes[DFS$CURRENT$SCOPE].sName
+                    Move iCommand to gtDFSScopes[DFS$CURRENT$SCOPE].iType
+                    // 0           1      2                  3              4               [N-1       N]
+                    // [Proc|Func] [Name] [For Class|Global] [Para1 Type[]] [Para2 Name]... [Returns] [Type]
+                    For iScopeToken from 2 to iLineTokens
+                        Get Command_ID ltLineTokens[iScopeToken].sImage to iScopeVarType
+                        If ((iScopeVarType<>DFT_ERROR)and(iScopeVarType<DFC_OPEN)) Begin
+                            // Parameter Type (3, 4, ... N-2)
+                            Get Var_Type iScopeVarType to iScopeVarType
+                            If (iScopeVarType<>DFT_ERROR) Begin
+                                Move 0 to iDimension
+                                Move iScopeVarType to ltLineTokens[iScopeToken].iSymbol
+                                // Possible array (dimension)
+                                Move iScopeToken to iDimToken
+                                Get Type_Dimension iScopeToken (&iDimToken) (&ltLineTokens) to iDimension
+                                If (iDimension=0) Move (iScopeToken+1) to iDimToken 
+                                // Register Scope Variable
+                                If (ltLineTokens[iDimToken].iSymbol=DFT_ID) ;
+                                    Get Var_Register iScopeVarType iDimension ltLineTokens[iDimToken].sImage ltLineTokens[iDimToken].iLine ltLineTokens[iDimToken].iColumn to sScopeVariable
+                            End
+                        End
+                        Else Begin
+                            Get Keyword_ID ltLineTokens[iScopeToken].sImage to iScopeVarType
+                            // Scope returns (N-1)
+                            If (iScopeVarType=DFW_RETURNS) Begin
+                                Get Command_ID ltLineTokens[iScopeToken+1].sImage to iScopeVarType
+                                If ((iScopeVarType<>DFT_ERROR)and(iScopeVarType<DFC_OPEN)) Begin
+                                    Get Var_Type iScopeVarType to iScopeVarType
+                                    If (iScopeVarType<>DFT_ERROR) ;
+                                        Move iScopeVarType to gtDFSScopes[DFS$CURRENT$SCOPE].iReturnType
+                                    If (ltLineTokens[iScopeToken+2].iSymbol=DFT_DIMSTART) Begin
+                                        Get Type_Dimension (iScopeToken+1) (&iDimToken) (&ltLineTokens) to iScopeDimension
+                                        Move iScopeDimension to gtDFSScopes[DFS$CURRENT$SCOPE].iReturnDimension
+                                    End
+                                End
+                                Move iLineTokens to iScopeToken
+                            End
+                        End
+                        If ((ltLineTokens[iScopeToken].iSymbol>=DFS_STRING)and(ltLineTokens[iScopeToken].iSymbol<=DFS_VARIANT)) Begin
+                            Increment iScopeArguments
+                            Increment iScopeToken
+                        End
+                    Loop
+                    Move iScopeArguments to gtDFSScopes[DFS$CURRENT$SCOPE].iNumArguments
+                    // All is defined (Scope, Local vars etc, so noise line)
+                    Move 1 to iNoiseLine
+                End
+                // Objects
+                If (iCommand=DFC_OBJECT) Begin
+                    Send Add_Method_Info ltLineTokens[iItem+1].sImage (If(iCommand=DFC_OBJECT, "Object", "Class")) (iDepth+1) ltLineTokens[iItem].iLine
+                    Set piObjectsCount to (piObjectsCount(Self)+1)
+                    Move (SizeOfArray(gtDFSScopes)) to DFS$CURRENT$SCOPE
+                    Move ltLineTokens[iItem+1].sImage to gtDFSScopes[DFS$CURRENT$SCOPE].sName
+                    Move iCommand to gtDFSScopes[DFS$CURRENT$SCOPE].iType
+                    // 1. Process Object
+                    // 1.1. Name
+                    Move (SizeOfArray(gtDFSScopes[DFS$CURRENT$SCOPE].atTokens)) to iScopeToken
+                    Move DFT_SCOPE                     to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iSymbol
+                    //Move ltLineTokens[iItem+1].iSymbol to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iSymbol
+                    Move ltLineTokens[iItem+1].sFile   to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].sFile
+                    Move ltLineTokens[iItem+1].sImage  to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].sImage
+                    Move ltLineTokens[iItem+1].iLine   to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iLine
+                    Move ltLineTokens[iItem+1].iColumn to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iColumn
+                    // 1.2. Class
+                    Move (SizeOfArray(gtDFSScopes[DFS$CURRENT$SCOPE].atTokens)) to iScopeToken
+                    Move DFS_CLASS to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iSymbol
+                    Move ltLineTokens[iItem+4].sFile   to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].sFile
+                    Move (Eval("U_"+ltLineTokens[iItem+4].sImage)) to iScopeClass
+                    Move iScopeClass                   to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].sImage
+                    Move ltLineTokens[iItem+4].iLine   to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iLine
+                    Move ltLineTokens[iItem+4].iColumn to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iColumn
+                    Move 1 to iNoiseLine
+                End
+                // Classes (Not supported)
+                If (iCommand=DFC_CLASS) Begin
+                    Send Add_Method_Info ltLineTokens[iItem+1].sImage (If(iCommand=DFC_OBJECT, "Object", "Class")) (iDepth+1) ltLineTokens[iItem].iLine
+                    Move (SizeOfArray(gtDFSScopes)) to DFS$CURRENT$SCOPE
+                    Move ltLineTokens[iItem+1].sImage to gtDFSScopes[DFS$CURRENT$SCOPE].sName
+                    Move iCommand to gtDFSScopes[DFS$CURRENT$SCOPE].iType
+                End
+                // Closing scopes
+                If ((iCommand=DFC_END_FUNCTION)or(iCommand=DFC_END_PROCEDURE))  Move DFS_DESKTOP to DFS$CURRENT$SCOPE
+                If ((iCommand=DFC_END_OBJECT)or(iCommand=DFC_END_CLASS))        Move DFS_DESKTOP to DFS$CURRENT$SCOPE
+            End
+            Else If (ltLineTokens[iItem].iSymbol=DFT_DIRECTIVE) ;
+                Set piDirectivesCount to (piDirectivesCount(Self)+1)
+            Else If (ltLineTokens[iItem].iSymbol=DFT_ID) Begin
+                Get Keyword_ID ltLineTokens[iItem].sImage to iCommand
+                If (iCommand=DFC_BEGIN) Begin
+                    Set   piScopeStartCount to (piScopeStartCount(Self)+1)
+                    Move (SizeOfArray(gtDFSScopes[DFS$CURRENT$SCOPE].atTokens)) to ;
+                          giDFSBlockStack[SizeOfArray(giDFSBlockStack)]
+                End
+                If (iCommand<>DFT_ERROR) ;
+                    Move iCommand to ltLineTokens[iItem].iSymbol
+                Else Begin
+                    Get Var_Find ltLineTokens[iItem].sImage to sVariable
+                    // Process database file define
+                    If ((sVariable="")and(ltLineTokens[iBaseToken].iSymbol=DFC_OPEN)) Begin
+                        Get Var_Register DFS_FILE 0 (ltLineTokens[iItem].sImage) (ltLineTokens[iItem].iLine) (ltLineTokens[iItem].iColumn) to sVariable
+                    End
+                    If (sVariable<>"") Begin
+                        If ("|FI"=Left(sVariable, 3)) Begin
+                            Move DFS_FILE to ltLineTokens[iItem].iSymbol
+                            Get Var_Value sVariable (&iToken) to sVariable
+                        End
+                    End
+                    Else If (iNoiseLine=0) Begin
+                        //
+                        Move 0  to iIDOK
+                        Move 0  to iScopeID
+                        Move "" to sMethodPrefix
+                        Move ltLineTokens[iItem].sImage to sMethodName
+                        // 1. Check either reference to the Script Method (GET/SET/SEND)
+                        If (ltLineTokens[0].iSymbol=DFC_MOVE)   Move "GET"  to sMethodPrefix
+                        If (ltLineTokens[0].iSymbol=DFC_GET)    Move "GET"  to sMethodPrefix
+                        If (ltLineTokens[0].iSymbol=DFC_SEND)   Move "MSG"  to sMethodPrefix
+                        If (ltLineTokens[0].iSymbol=DFC_SET)    Move "SET"  to sMethodPrefix
+                        If (sMethodPrefix<>"") ;
+                            Move (sMethodPrefix+"_"+sMethodName) to sMethodName
+                        Move sMethodName to ltScope.sName
+                        Move (SearchArray(ltScope, gtDFSScopes))            to iScopeID
+                        // 2. If not a method, then check either Script Object Reference
+                        If ((iScopeID<0)and(sMethodPrefix<>"")) Begin
+                            Move ltLineTokens[iItem].sImage to ltScope.sName
+                            Move (SearchArray(ltScope, gtDFSScopes))        to iScopeID
+                            If (iScopeID>=0) Move "" to sMethodPrefix
+                        End
+                        // 3. Test if either scope found
+                        If (iScopeID<0) Begin
+                            // 4. If not a Script scope, then check either DataFlex or Application Reference
+                            Get Validate_ID ltLineTokens[iItem].sImage to iIDOK
+                            // 5. Check either FILE.FIELD value
+                            Move (IsFileField(Self, ltLineTokens[iItem].sImage)) to iFileField
+                            // File_Field or File_Number (and set appropriate Symbol)
+                            If (iFileField>0) Move DFT_FILEFIELD to ltLineTokens[iItem].iSymbol
+                            // If not a file.field, then should be integer constant
+                            If (iFileField<0) Begin
+                                Move DFT_INTEGER        to ltLineTokens[iItem].iSymbol
+                                Move (Abs(iFileField))  to ltLineTokens[iItem].sImage
+                            End
+                            // 6. If item is not recognized, then generate error (not defined)
+                            If (not(iIDOK)) Begin
+                                Move ltLineTokens[iItem].sImage to sMethodName
+                                If (sMethodPrefix<>"") Move (sMethodPrefix+'_'+sMethodName) to sMethodName
+                                Send Add_Error_Info 4345 ltLineTokens[iItem].iLine ltLineTokens[iItem].iColumn ("Type check error." * sMethodName * "must be defined") ltLineTokens[iItem].sFile
+                            End
+                        End
+                        Else Begin
+                            // 7. If scope found and not a Script object, then process scope in the code
+                            // PREFIX$ID_REF ("GET$25", "SET$15" etc)
+                            If (sMethodPrefix<>"") Begin
+                                Move DFT_SCOPE                              to ltLineTokens[iItem].iSymbol
+                                Move (sMethodPrefix+"$"+String(iScopeID))   to ltLineTokens[iItem].sImage
+                            End
+                        End
+                        //
+                    End
+                End
+            End
+            Move ltLineTokens[iItem].iSymbol to ltToken[iToken].iSymbol
+            Move ltLineTokens[iItem].sFile   to ltToken[iToken].sFile
+            Move ltLineTokens[iItem].sImage  to ltToken[iToken].sImage
+            Move ltLineTokens[iItem].iLine   to ltToken[iToken].iLine
+            Move ltLineTokens[iItem].iColumn to ltToken[iToken].iColumn
+            //
+            // Building scope tokens list (actual exec list)
+            If (iNoiseLine=0) Begin
+                Move (SizeOfArray(gtDFSScopes[DFS$CURRENT$SCOPE].atTokens)) to iScopeToken
+                Move ltLineTokens[iItem].iSymbol to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iSymbol
+                Move ltLineTokens[iItem].sFile   to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].sFile
+                If (sVariable<>"") Move sVariable to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].sImage
+                Else Move ltLineTokens[iItem].sImage  to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].sImage
+                Move ltLineTokens[iItem].iLine   to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iLine
+                Move ltLineTokens[iItem].iColumn to gtDFSScopes[DFS$CURRENT$SCOPE].atTokens[iScopeToken].iColumn
+            End
+            Increment iToken
+        Loop
+        //
+        Set   ptTokens              to ltToken
+        Set   piLinesCount          to (piLinesCount(Self)+1)
+        Set   piTokensCount         to iToken
+        //
+        // If line declares Variables/Constant, then register it here
+        // Base token is a line command token like (INTEGER, STRING etc)
+        If ((ltLineTokens[iBaseToken].iSymbol>=DFC_STRING)and(ltLineTokens[iBaseToken].iSymbol<=DFC_DEFINE)) ;
+            Send Register_Variables (&iScriptToken) (&ltLineTokens)
+        //
+    End_Procedure
+    // Helper procedure to collect line tokens
+    Procedure AddLineToken tDFSToken[] ByRef ltLineTokens Integer iType String sFile String sImage Integer iLine Integer iColumn
+        Integer iToken
+        Move (SizeOfArray(ltLineTokens)) to iToken
+        Move iType      to ltLineTokens[iToken].iSymbol
+        Move iLine      to ltLineTokens[iToken].iLine
+        Move iColumn    to ltLineTokens[iToken].iColumn
+        Move sFile      to ltLineTokens[iToken].sFile
+        Move sImage     to ltLineTokens[iToken].sImage
+    End_Procedure
+    // Main parsing procedure. Parses script line and builds line tokens.
+    Procedure ParseLine Integer iErrLine String sLine String sFile Integer iDepth
+        Integer iLength  iToken iChar  iColumn iNum iStr iID iBrackets
+        String  sChar    sImage
+        tDFSToken[] ltLineTokens
+        // Output PRN if required
+        If ((piGeneratePRN(Self)) and (Left(sLine,1)<>DFS_TAGSTART_SET)) ;
+            Write channel (piPRNChannel(Self)) (Right("000000"+String(iErrLine), 6)) (">"+Repeat(">", iDepth)+" ") sLine
+        // Normalize line
+        Move (Left(Trim(sLine), Pos(DFS_COMMENT_SET, sLine)-1)) to sLine
+        // Parse Line
+        Move (Length(sLine)) to iLength
+        If (sLine<>"") Begin
+            For iChar from 1 to (iLength+1)
+                If (iChar<=iLength) Move (Mid(sLine, 1, iChar)) to sChar
+                Else Move "" to sChar
+                // String Constant
+                If (Pos(sChar, DFS_STRING_SET)) Begin
+                    Move iChar to iColumn
+                    Move (Pos(sChar, sLine, iChar+1)) to iStr
+                    Move (Mid(sLine, (iStr-iChar+1), iChar)) to sImage
+                    Send AddLineToken (&ltLineTokens) DFT_STRING sFile sImage iErrLine iColumn
+                    Move "" to sImage
+                    // String Read complete, go to next char
+                    Move (iStr+1) to iChar
+                    If (iChar<=iLength) Move (Mid(sLine, 1, iChar)) to sChar
+                End
+                // Number/Integer/Real Constant
+                If (iID=0) Begin
+                    If (DFS_DIGIT_SET contains sChar) Begin
+                        Move iChar to iColumn
+                        Move 1 to iNum
+                    End
+                    Else If ( (iNum) and (not(DFS_REAL_SET contains sChar)) ) Begin
+                        Move 0 to iNum
+                        Increment iToken
+                        Uppercase sImage to sImage
+                        If      (sImage contains "E") Send AddLineToken (&ltLineTokens) DFT_REAL    sFile sImage iErrLine iColumn
+                        Else If (sImage contains ".") Send AddLineToken (&ltLineTokens) DFT_NUMBER  sFile sImage iErrLine iColumn
+                        Else                          Send AddLineToken (&ltLineTokens) DFT_INTEGER sFile sImage iErrLine iColumn
+                        Move "" to sImage
+                        Move 0  to iColumn
+                    End
+                    If iNum Move (sImage+sChar) to sImage
+                End
+                // ID
+                If (iNum=0) Begin
+                    If ((iID=0)and(DFS_ID_HEAD contains sChar)) Begin
+                        Move iChar to iColumn
+                        Move 1 to iID
+                    End
+                    Else If (iID and (not(DFS_ID_TAIL contains sChar)) ) Begin
+                        Move 0 to iID
+                        Increment iToken
+                        Uppercase sImage to sImage
+                        If (iToken=1) Begin
+                            If (Left(sImage, 1)="#")  Send AddLineToken (&ltLineTokens) DFT_DIRECTIVE sFile sImage iErrLine iColumn
+                            Else                      Send AddLineToken (&ltLineTokens) DFT_COMMAND   sFile sImage iErrLine iColumn
+                        End
+                        Else                          Send AddLineToken (&ltLineTokens) DFT_ID        sFile sImage iErrLine iColumn
+                        Move "" to sImage
+                        Move 0  to iColumn
+                    End
+                    If iID Move (sImage+sChar) to sImage
+                End
+                // Special Chars (Array, Operator, Expression)
+                If (DFS_SYMBOLS_SET contains sChar) Begin
+                    Case Begin
+                        Case (DFS_OPERATOR_SET contains sChar)
+                            Send AddLineToken (&ltLineTokens) DFT_OPERATOR sFile sChar iErrLine iChar
+                            Case Break
+                        Case ("("=sChar)
+                            Increment iBrackets
+                            Send AddLineToken (&ltLineTokens) DFT_EXPSTART sFile sChar iErrLine iChar
+                            Case Break
+                        Case (")"=sChar)
+                            Decrement iBrackets
+                            Send AddLineToken (&ltLineTokens) DFT_EXPSTOP  sFile sChar iErrLine iChar
+                            Case Break
+                        Case (sChar="[")
+                            Increment iBrackets
+                            Send AddLineToken (&ltLineTokens) DFT_DIMSTART sFile sChar iErrLine iChar
+                            Case Break
+                        Case (sChar="]")
+                            Decrement iBrackets
+                            Send AddLineToken (&ltLineTokens) DFT_DIMSTOP  sFile sChar iErrLine iChar
+                            Case Break
+                        Case (sChar=DFS_TAGSTART_SET)
+                            Increment iBrackets
+                            Increment iToken
+                            Send AddLineToken (&ltLineTokens) DFT_TAGSTART sFile sChar iErrLine iChar
+                            Case Break
+                        Case (sChar=DFS_TAGSTOP_SET)
+                            Decrement iBrackets
+                            Send AddLineToken (&ltLineTokens) DFT_TAGSTOP  sFile sChar iErrLine iChar
+                            Case Break
+                        Case (sChar=DFS_FUNCLIST_SET)
+                            Send AddLineToken (&ltLineTokens) DFT_FUNCLIST sFile sChar iErrLine iChar
+                            Case Break
+                    Case End
+                End
+            Loop
+            If iBrackets Send Add_Error_Info 4346 iErrLine 0 "Unequal parentheses" sFile
+            Send AddLineToken (&ltLineTokens) DFT_NEWLINE sFile "<EOL>" iErrLine iChar
+            Send RegisterTokens (&ltLineTokens) iDepth
+        End
+    End_Procedure
+    // Function to compile current source file (.DS). Called recursively to include 
+    // used/included source files (.DP). Also, in line processed some compiler directives.
+    Function mIncludeFile Integer iErrLine String sLine Integer iDepth Returns Integer
+        Integer iScriptChannel
+        Integer iLine iCurLine bExists
+        String  sIncFile sParseLine sCMD sError sPath
+        //
+        Integer iPRN iPRNChannel
+        Get piGeneratePRN   to iPRN
+        Get piPRNChannel    to iPRNChannel
+        //
+        tDFSFile[] ltDFSFiles
+        tDFSFile   ltDFSFile
+        Integer iIncFiles
+        Get ptDFSFiles to ltDFSFiles
+        Move (SizeOfArray(ltDFSFiles)) to iIncFiles
+        //
+        If iDepth Begin
+            // USE|#INCLUDE
+            If (not(Pos(" ", sLine))) Function_Return iErrLine
+            //
+            Move (Left(sLine, Pos(' ', sLine))) to sCMD
+            Move (Replace(sCMD, sLine, "")) to sIncFile
+            //
+            If (Pos('//', sIncFile)) ;
+                Move (Trim(Left(sIncFile, Pos('//', sIncFile)-1))) to sIncFile // Remove Comments
+            //
+            Get_File_Path sIncFile to sPath
+            Move (Uppercase(Trim(sCMD))) to sCMD
+            Move (Uppercase(sIncFile)) to ltDFSFile.sFileName
+            If (SearchArray(ltDFSFile, ltDFSFiles)=-1) ;
+                Send Add_Compiler_Info 1 ("Including file:"*sIncFile*'('+sPath+')')
+            Else If (sCMD="USE") ;
+                Function_Return iErrLine // "USE" file only once
+            Else ;
+                Send Add_Compiler_Info 1 ("Including file:"*sIncFile*'('+sPath+')')
+        End
+        Else Get psScriptSource to sIncFile
+        //
+        If iDepth Send Add_Method_Info (Uppercase(sIncFile)) sCMD iDepth iErrLine
+        Else Send Add_Method_Info (Uppercase(psScriptFile(Self))) "Script" 0 0
+        //
+        Get piScriptChannel to iScriptChannel
+        Direct_Input channel iScriptChannel sIncFile
+        If (SeqEof) Begin
+            File_Exist sIncFile bExists
+            If (bExists=0) Begin
+                Send Add_Error_Info 4313 iErrLine 0 ("Include file not found"*sIncFile) (psScriptFile(Self))
+                Close_Input channel iScriptChannel
+                Function_Return iErrLine
+            End
+        End
+        If (iDepth=0) Get psScriptFile to sIncFile
+        If iPRN Begin
+            If iDepth Writeln channel iPRNChannel "Including file: " sIncFile
+            Else      Writeln channel iPRNChannel "Compiling Script: " (psScriptSource(Self))
+        End
+        //
+        While (not(SeqEof))
+            Readln channel iScriptChannel sLine
+            Increment iErrLine
+            Increment iLine
+            Move (Trim(sLine)) to sLine
+            If ((sLine<>"") and (Left(sLine,2)<>"//")) Begin
+                While (Right(sLine, 1)=";")
+                    Readln channel iScriptChannel sParseLine
+                    Increment iErrLine
+                    Increment iLine
+                    Move (sLine+Trim(sParseLine)) to sLine
+                Loop
+                If (Left(Uppercase(sLine),6)="#ERROR") Begin
+                    If iPRN Writeln channel iPRNChannel (Uppercase(sLine)) " ON LINE: " iLine " (" iErrLine ") OF FILE: " sIncFile
+                    Move (Right(Uppercase(sLine), Length(sLine)-7)) to sLine
+                    Move (Left(sLine, Pos(" ", sLine))) to sError
+                    Move (Replace(sError, sLine, "")) to sLine
+                    Send Add_Error_Info (Trim(sError)) iLine iErrLine sLine sIncFile
+                End
+                Else If (Left(Uppercase(sLine),4)="#REM") Begin
+                    If iPRN Writeln channel iPRNChannel sLine
+                End
+                Else Begin
+                    // Parse line with the Terminator
+                    Send ParseLine iErrLine (sLine+DFS_CRLF) sIncFile iDepth
+                    If ( "USE|#IN" contains Uppercase(Left(sLine, 3)) ) Begin
+                        Close_Input channel iScriptChannel
+                        Move (iLine-1) to iCurLine
+                        Get mIncludeFile iErrLine sLine (iDepth+1) to iErrLine
+                        If iDepth Direct_Input channel iScriptChannel sIncFile
+                        Else      Direct_Input channel iScriptChannel (psScriptSource(Self))
+                        For iLine from 1 to iCurLine
+                            Readln channel iScriptChannel sLine
+                        Loop
+                    End
+                End
+            End
+        Loop
+        If (iDepth=0) Set Token to DFT_EOF "<EOF>" (psScriptFile(Self)) iErrLine 0
+        Close_Input channel iScriptChannel
+        Function_Return iErrLine
+    End_Function
+    // Script compile procedure. Requires script file. Used by debugger to collect compile information.
+    Procedure Compile
+        If (piExecutable(Self)) Begin
+            Send Load_Executable (psScriptSource(Self))
+            Procedure_Return
+        End
+        // Metrics
+        DateTime dtCompileStart dtCompileStop
+        TimeSpan tsTime
+        Move (CurrentDateTime()) to dtCompileStart
+        //
+        Integer iPRN iPRNChannel
+        String sSource
+        Get psScriptSource  to sSource
+        If (sSource="") Begin
+            Error 500 "DataFlex Script Not Specified"
+            Procedure_Return
+        End
+        //
+        Send Delete_Data
+        //
+        Send Add_Compiler_Info 0 ("---- Compiling"*sSource*"----")
+        //
+        Get piGeneratePRN   to iPRN
+        Get piPRNChannel    to iPRNChannel
+        If iPRN Direct_Output channel iPRNChannel (sSource+".prn")
+        Integer iErrLine
+        Get mIncludeFile 0 "" 0 to iErrLine
+        // +4323?
+        If (piScopeStartCount(Self)<>piScopeStopCount(Self)) ;
+            Send Add_Error_Info 4391 iErrLine 0 "Scope start/stop without scope end/start command)" (psScriptFile(Self))
+        //
+        Set ptDFSScopes     to gtDFSScopes
+        //
+        // Summary
+        Move (CurrentDateTime()) to dtCompileStop
+        Move (dtCompileStop-dtCompileStart) to tsTime
+        Set ptsCompileTime to tsTime
+        //
+        Send Add_Compiler_Info 1 "Summary"
+        Send Add_Compiler_Info 1  "Total Warnings  : 0"
+        Send Add_Compiler_Info 1 ("Total Errors    : "+String(piErrorsCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Lines     : "+String(piLinesCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Tokens    : "+String(piTokensCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Commands  : "+String(piCommandsCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Directives: "+String(piDirectivesCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Constants : "+String(piConstantsCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Variables : "+String(piVariablesCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Objects   : "+String(piObjectsCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Methods   : "+String(piMethodsCount(Self)))
+        Send Add_Compiler_Info 1 ("Total Scopes    : "+String(piScopeStartCount(Self)))
+        Send Add_Compiler_Info 1 ("Compile Time    : "+(String(DateGetMinute(tsTime))+'m'*String(DateGetSecond(tsTime))+'s'*String(DateGetMillisecond(tsTime))+"ms"))
+        //
+        If (piErrorsCount(Self)) Send Add_Compiler_Info 4  "---- Compile Finished (With Errors!) ----"
+        Else                     Send Add_Compiler_Info 4  "---- Compile Finished ----"
+        //
+        If iPRN Begin
+            Writeln channel iPRNChannel "Summary: "
+            Writeln channel iPRNChannel "Total Warnings  : 0"
+            Writeln channel iPRNChannel "Total Errors    : " (piErrorsCount(Self))
+            Writeln channel iPRNChannel "Total Lines     : " (piLinesCount(Self))
+            Writeln channel iPRNChannel "Total Tokens    : " (piTokensCount(Self))
+            Writeln channel iPRNChannel "Total Commands  : " (piCommandsCount(Self))
+            Writeln channel iPRNChannel "Total Directives: " (piDirectivesCount(Self))
+            Writeln channel iPRNChannel "Total Constants : " (piConstantsCount(Self))
+            Writeln channel iPRNChannel "Total Variables : " (piVariablesCount(Self))
+            Writeln channel iPRNChannel "Total Objects   : " (piObjectsCount(Self))
+            Writeln channel iPRNChannel "Total Methods   : " (piMethodsCount(Self))
+            Writeln channel iPRNChannel "Total Scopes    : " (piScopeStartCount(Self))
+            Writeln channel iPRNChannel "Compile Time    : " (String(DateGetMinute(tsTime))+'m'*String(DateGetSecond(tsTime))+'s'*String(DateGetMillisecond(tsTime))+"ms")
+            Close_Output channel iPRNChannel 
+        End
+        //
+    End_Procedure
+End_Class
+
+// Top level DFScriptor Class
+Class cDFScriptor is a cDFScriptorBuilder
+    // Returns Const|Variable|FileFieldValue|Expression
+    Function Return_Statement Integer iToken Returns Integer
+        String  sValue
+        Move 1 to giScript$Return$Flag
+        Increment iToken
+        Get GetScriptValue gtDFSTokens[iToken].iSymbol gtDFSTokens[iToken].sImage (&iToken) to sValue
+        Set psReturnValue to sValue
+        Function_Return iToken
+    End_Function
+
+    Function Scope_Value Integer iToken Returns Integer
+        Integer     iScope iSymbol iRetValue
+        String      sScope sScopeValue sValue
+        Integer     iNumArguments
+        String[]    sParameters
+        tDFSScope   ltDFSScope
+        tDFSScope[] ltDFSScopes
+        tDFSToken[] ltDFSTokens
+        String[]    lsReturnValues
+        Get ptDFSScopes to ltDFSScopes
+        Move gtDFSTokens[iToken].sImage to sScope
+        Move (Right(sScope, Length(sScope)-4)) to iScope
+        //
+        If (gtDFSTokens[iToken+1].iSymbol=DFT_EXPSTART) Begin
+            Move 0 to iNumArguments
+            Increment iToken // '('
+            Increment iToken // List of optional parameters
+            While ((iSymbol<>DFT_NEWLINE)and(iSymbol<>DFT_EXPSTOP))
+                Move gtDFSTokens[iToken].iSymbol to iSymbol
+                // Ignore SELF, ',', '(', ')'
+                If ((iSymbol<>DFW_SELF)and(iSymbol<>DFT_EXPSTOP)and(iSymbol<>DFT_FUNCLIST)) Begin 
+                    Get GetScriptValue gtDFSTokens[iToken].iSymbol gtDFSTokens[iToken].sImage (&iToken) to sParameters[iNumArguments]
+                    Increment iNumArguments
+                End
+                Increment iToken
+            Loop
+        End
+        //
+        Move gtDFSTokens                     to ltDFSTokens
+        Move ltDFSScopes[iScope].atTokens    to gtDFSTokens
+        Set psScriptParameters               to sParameters
+        Get Exec_Script iScope iNumArguments to iRetValue
+        Move ltDFSTokens                     to gtDFSTokens
+        //
+        Function_Return (iToken-1)
+    End_Function
+    //
+    Function Process_Expression Integer ByRef iToken Returns String
+        Integer iSymbol iTokens iBrOpen iBrClose iString iScopeID
+        String sExpression sValue sIndex sScope
+        tDFSScope ltScope
+        Move (SizeOfArray(gtDFSTokens)) to iTokens
+        Increment iBrOpen
+        Move gtDFSTokens[iToken].sImage to sExpression
+        While ((iSymbol<>DFT_NEWLINE)and(iToken<iTokens))
+            Increment iToken
+            Move gtDFSTokens[iToken].iSymbol    to iSymbol
+            Move gtDFSTokens[iToken].sImage     to sValue
+            If (iSymbol=DFS_STRING)   Move 1 to iString
+            If (iSymbol=DFT_EXPSTART) Increment iBrOpen
+            If (iSymbol=DFT_EXPSTOP)  Increment iBrClose
+            If (iSymbol=DFT_ID) Begin
+                If (Left(sValue, 1)="|") Get Var_Value sValue (&iToken) to sValue
+                Else Begin
+                    Move (gtDFSTokens[iToken].sImage) to sValue // ToDo: Func in Exp!
+                    If (SizeOfArray(gtDFSScopes)>1) Begin
+                        Move sValue to ltScope.sName
+                        Move (SearchArray(ltScope, gtDFSScopes)) to iScopeID
+                        If (iScopeID>0) Begin
+                            If (gtDFSScopes[iScopeID].iType=DFC_OBJECT) Begin
+                                Move gtDFSScopes[iScopeID].atTokens[0].sImage to sScope
+                                Increment iToken // (
+                                Increment iToken // SELF
+                                Increment iToken // )
+                                Move (Right(sScope, Length(sScope)-4)) to sValue
+                            End
+                        End
+                    End
+                End
+            End
+            If (iSymbol=DFT_SCOPE) Begin
+                Get Scope_Value iToken to iToken
+                Get psReturnValue to sValue
+                Send Clear_Script
+            End
+            Move (sExpression+sValue) to sExpression
+            If (iBrOpen=iBrClose) Move DFT_NEWLINE to iSymbol
+        Loop
+        Move (Eval(sExpression)) to sExpression
+        If (iString) Move ('"'+sExpression+'"') to sExpression
+        Function_Return sExpression
+    End_Function
+    //
+    // Skip Tokens
+    Function Skip_Tokens Integer iToken Integer iStopSymbol Returns Integer
+        Integer iSymbol
+        While (iSymbol<>iStopSymbol)
+            Increment iToken
+            Move gtDFSTokens[iToken].iSymbol  to iSymbol
+        Loop
+        Function_Return iToken
+    End_Function
+    //
+    // Executes block of the code between Start and Stop tokens
+    Function Process_Block Integer iToken Integer iStopToken Returns Integer
+        Integer iSymbol iTokens
+        Move (SizeOfArray(gtDFSTokens)) to iTokens
+        While ((iToken<iStopToken)and(iToken<iTokens))
+            Increment iToken
+            Move gtDFSTokens[iToken].iSymbol to iSymbol
+            If (iSymbol<>DFT_NEWLINE) Get Exec_Command iSymbol iToken to iToken
+        Loop
+        Function_Return iToken
+    End_Function
+    //
+    Procedure SetFieldValue String sToken Integer ByRef iToken String sValue
+        Integer iFile iField
+        String sFile sVar
+        Pos "." in sToken
+        Left sToken to sFile
+        Replace sFile in sToken with ""
+        Replace "." in sFile with ""
+        Get Var_Find  sFile to sVar
+        Get Var_Value sVar (&iToken) to iFile
+        If (iFile) Begin
+            Field_Map iFile sToken to iField
+            // Excludes RECNUM
+            If (iField) Set_Field_Value iFile iField to sValue
+        End
+    End_Procedure
+    Function GetFieldValue String sToken Integer ByRef iToken Returns String
+        Integer iFile iField iType
+        String sFile sVar sValue
+        Pos "." in sToken
+        Left sToken to sFile
+        Replace sFile in sToken with ""
+        Replace "." in sFile with ""
+        Get Var_Find  sFile to sVar
+        Get Var_Value sVar (&iToken) to iFile
+        If (iFile) Begin
+            Field_Map iFile sToken to iField
+            Get_Attribute DF_FIELD_TYPE of iFile iField to iType
+            Get_Field_Value iFile iField to sValue
+        End
+        If (iType=DF_ASCII) Function_Return ('"'+sValue+'"')
+        Function_Return sValue
+    End_Function
+    Function GetScriptValue Integer iSymbol String sToken Integer ByRef iToken Returns String
+        String sValue
+        If ((iSymbol>=DFT_STRING)and(iSymbol<=DFT_INTEGER)) Move sToken to sValue
+        If (iSymbol=DFT_FILEFIELD) Get GetFieldValue sToken (&iToken) to sValue
+        If (iSymbol=DFT_ID)        Get Var_Value     sToken (&iToken) to sValue
+        If (iSymbol=DFT_EXPSTART)  Get Process_Expression   (&iToken) to sValue
+        Function_Return sValue
+    End_Function
+    //
+    Function Sleep_Statement Integer iToken Returns Integer
+        String      sValue
+        Integer     iValue
+        Increment   iToken
+        Get GetScriptValue gtDFSTokens[iToken].iSymbol gtDFSTokens[iToken].sImage (&iToken) to iValue
+        If (iValue) Sleep iValue
+        Function_Return iToken
+    End_Function
+    //
+    Function SysDate_Statement Integer iToken Returns Integer
+        Date dToday
+        String sToken sValue sHr sMin sSec
+        Integer iSymbol iParameter
+        Move 0 to iParameter
+        Move 999999999 to iSymbol
+        SysDate4 dToday sHr sMin sSec
+        // Parameters
+        While ((iSymbol<>DFT_NEWLINE)and(iSymbol<>DFT_EOF))
+            Increment iToken // Value
+            Move gtDFSTokens[iToken].sImage     to sToken
+            Move gtDFSTokens[iToken].iSymbol    to iSymbol
+            If (iSymbol<>DFT_NEWLINE) Begin
+                Increment iParameter
+                If (iParameter=1)           Move (String(dToday))               to sValue
+                If (iParameter=2)           Move sHr                            to sValue
+                If (iParameter=3)           Move sMin                           to sValue
+                If (iParameter=4)           Move sSec                           to sValue
+                If (iSymbol=DFT_ID)         Set Var_Value      sToken (&iToken) to sValue
+                If (iSymbol=DFT_FILEFIELD)  Send SetFieldValue sToken (&iToken)    sValue
+            End
+        Loop
+        Function_Return iToken
+    End_Function
+    //
+    // Indicate found False
+    // Indicate SeqEof as (28<65)
+    // Indicate Found as Customer.Customer_Number Eq 5
+    // Indicate err as (1>5)
+    // INDICATE {Found|Err|SeqEof|SeqEol} [TRUE|FALSE|AS] [Logical Expression]
+    Function Indicate_Statement Integer iToken Returns Integer
+        String  sToken sExpression
+        Integer iPreDefIndicator iResult iSymbol
+        // Pre-Defined Indicator {Found|Err|SeqEof|SeqEol}
+        Increment iToken // Pre-Defined Indicator
+        Move gtDFSTokens[iToken].iSymbol to iPreDefIndicator
+        // TRUE|FALSE|AS
+        Increment iToken
+        If ((gtDFSTokens[iToken].iSymbol=DFW_TRUE)or(gtDFSTokens[iToken].iSymbol=DFW_FALSE)) ;
+            Move (Eval(gtDFSTokens[iToken].sImage)) to iResult
+        If (gtDFSTokens[iToken].iSymbol=DFW_AS) Begin
+            // Calc expressions
+            Move gtDFSTokens[iToken].iSymbol        to iSymbol
+            While ((iSymbol<>DFT_EOF)and(iSymbol<>DFT_NEWLINE))
+                Increment iToken
+                Move gtDFSTokens[iToken].sImage             to sToken
+                Move gtDFSTokens[iToken].iSymbol            to iSymbol
+                If ((iSymbol<>DFT_EOF)and(iSymbol<>DFT_NEWLINE)) Begin
+                    If (iSymbol<>DFT_FILEFIELD) Begin
+                        If ((iSymbol<DFO_OP$START) and (iSymbol>DFO_OP$STOP)) Begin
+                            Get GetScriptValue iSymbol sToken (&iToken) to sToken
+                        End
+                    End
+                    Move (sExpression * sToken)                 to sExpression
+                End
+            Loop
+            Move ('('+sExpression+')') to sExpression
+            Move (Eval(sExpression))                        to iResult
+        End
+        //
+        If (iPreDefIndicator=DFW_FOUND)     Indicate Found      as iResult
+        If (iPreDefIndicator=DFW_SEQEOF)    Indicate SeqEof     as iResult
+        If (iPreDefIndicator=DFW_SEQEOL)    Indicate SeqEol     as iResult
+        If (iPreDefIndicator=DFW_ERR)       Indicate Err        as iResult
+        //
+        Function_Return iToken
+    End_Function
+    // Move statement processing...
+    // MOVE|ADD|SUBTRACT (Expression) TO (Variable|File_Field)
+    // INCREMENT|DECREMENT (Variable|File_Field)
+    Function Move_Statement Integer iMode Integer iToken Returns Integer
+        String  sToken sValue sVariable
+        Number  nValue nResult
+        Integer iSymbol
+        If (iMode=DFC_INDICATE) Function_Return (Indicate_Statement(Self, iToken))
+        Increment iToken // Value
+        Move gtDFSTokens[iToken].sImage     to sToken
+        Move gtDFSTokens[iToken].iSymbol    to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to sValue
+        If ((iMode=DFC_INCREMENT)or(iMode=DFC_DECREMENT)) Begin
+            Move sValue to nValue
+            If (iMode=DFC_INCREMENT) Increment nValue
+            If (iMode=DFC_DECREMENT) Decrement nValue
+            Move nValue to sValue
+        End
+        Else Begin
+            Increment iToken // To|From
+            Increment iToken // Var
+            Move gtDFSTokens[iToken].sImage     to sToken
+            Move gtDFSTokens[iToken].iSymbol    to iSymbol
+            If (iMode=DFC_ADD)          Begin
+                Move sValue to nValue
+                Get GetScriptValue iSymbol sToken (&iToken) to nResult
+                Move (nResult+nValue) to sValue
+            End
+            If (iMode=DFC_SUBTRACT)     Begin
+                Move sValue to nValue
+                Get GetScriptValue iSymbol sToken (&iToken) to nResult
+                Move (nResult-nValue)   to sValue
+            End
+        End
+        If (iSymbol=DFT_ID)         Set  Var_Value     sToken (&iToken) to sValue
+        If (iSymbol=DFT_FILEFIELD)  Send SetFieldValue sToken (&iToken)    sValue
+        Function_Return iToken
+    End_Function
+    //
+    // 
+    // Attributes
+    // Set_Attribute {attribute} [of {tableHandle} [{columnNum} | {indexNum} [{segmentNum}]]] to {variable}
+    // Get_Attribute {attribute} [of {tableHandle} [{columnNum} | {indexNum} [{segmentNum}]]] to {variable}
+    // Set_Attribute {attribute}  of {driverId}                                               to {variable}
+    // Get_Attribute {attribute}  of {driverId} {databaseHandle}                              to {variable}
+    // Set_Attribute {attribute}  of {driverId}                                               to {variable}
+    // Get_Attribute {attribute}  of {driverId} {databaseHandle}                              to {variable}
+    Function GetSetAttr_Statement Integer iMode Integer iToken Returns Integer
+        String  sToken  sValue     sVariable
+        Integer iSymbol iAttribute iVariable
+        Integer iPar1 iPar2 iPar3  iParameter iParameters
+        Increment iToken // Attribute ID
+        Move gtDFSTokens[iToken].sImage     to sToken
+        Move gtDFSTokens[iToken].iSymbol    to iSymbol
+        Move (Eval(sToken)) to iAttribute
+        While ((iSymbol<>DFT_NEWLINE)and(iSymbol<>DFT_EOF)and(iSymbol<>DFW_TO))
+            Increment iToken // [Of|Parameters|to]
+            Move gtDFSTokens[iToken].sImage     to sToken
+            Move gtDFSTokens[iToken].iSymbol    to iSymbol
+            If ((iSymbol<>DFW_OF)and(iSymbol<>DFW_TO)) Begin
+                Increment iParameters
+                If (iSymbol=DFS_FILE) Move sToken to iParameter
+                Else Get GetScriptValue iSymbol sToken (&iToken) to iParameter
+                If (iParameters=1) Move iParameter to iPar1
+                If (iParameters=2) Move iParameter to iPar2
+                If (iParameters=3) Move iParameter to iPar3
+            End
+        Loop
+        If (iSymbol=DFW_TO) Begin
+            Increment iToken // Variable
+            Move gtDFSTokens[iToken].sImage     to sToken
+            Move gtDFSTokens[iToken].iSymbol    to iSymbol
+            Move iSymbol    to iVariable
+            Move sToken     to sVariable
+        End
+        //
+        If (iMode=DFC_GET_ATTRIBUTE) Begin
+            If (iParameters=0) Get_Attribute iAttribute                          to sValue
+            If (iParameters=1) Get_Attribute iAttribute of iPar1                 to sValue
+            If (iParameters=2) Get_Attribute iAttribute of iPar1 iPar2           to sValue
+            If (iParameters=3) Get_Attribute iAttribute of iPar1 iPar2 iPar3     to sValue
+            If (iVariable=DFT_ID)         Set  Var_Value     sVariable (&iToken) to sValue
+            If (iVariable=DFT_FILEFIELD)  Send SetFieldValue sVariable (&iToken)    sValue
+        End
+        If (iMode=DFC_SET_ATTRIBUTE) Begin
+            If (iParameters=0) Set_Attribute iAttribute                      to sValue
+            If (iParameters=1) Set_Attribute iAttribute of iPar1             to sValue
+            If (iParameters=2) Set_Attribute iAttribute of iPar1 iPar2       to sValue
+            If (iParameters=3) Set_Attribute iAttribute of iPar1 iPar2 iPar3 to sValue
+        End
+        //
+        Function_Return iToken
+    End_Function
+    //
+    // [COMMAND] [Channel] [ChannelNo] [Para1] ... [Para N]
+    Function InOutput_Statement Integer iMode Integer iToken Returns Integer
+        String  sToken sValue sReadVar
+        Integer iSymbol
+        Integer iChannel iSize iReadBlock
+        Move gtDFSTokens[iToken+1].iSymbol to iSymbol
+        If ((iSymbol=DFT_NEWLINE)or(iSymbol=DFT_EOF)) Decrement iToken
+        Move 0  to iChannel
+        Move 999999999 to iSymbol
+        While ((iSymbol<>DFT_NEWLINE)and(iSymbol<>DFT_EOF))
+            Increment iToken // Value
+            Move gtDFSTokens[iToken].sImage  to sToken
+            Move gtDFSTokens[iToken].iSymbol to iSymbol
+            If ((iSymbol<>DFT_NEWLINE)and(iSymbol<>DFT_EOF)) Begin
+                // IO Channel
+                Move "" to sValue
+                If (iSymbol=DFW_CHANNEL) Begin
+                    Increment iToken // Value
+                    Move gtDFSTokens[iToken].sImage  to sToken
+                    Move gtDFSTokens[iToken].iSymbol to iSymbol
+                    Get GetScriptValue iSymbol sToken (&iToken) to iChannel
+                End
+                Else Begin
+                    If ((iMode<>DFC_READ_BLOCK)and(iMode<>DFC_READ_HEX)) Begin
+                        Get GetScriptValue iSymbol sToken (&iToken) to sValue
+                        Move (Replaces('"',sValue,'')) to sValue
+                    End
+                    Else Begin
+                        Move sToken to sReadVar
+                        Increment iToken // Value
+                        Move gtDFSTokens[iToken].sImage  to sToken
+                        Move gtDFSTokens[iToken].iSymbol to iSymbol
+                        Get GetScriptValue iSymbol sToken (&iToken) to iSize
+                        Move 1 to iReadBlock
+                    End
+                End
+                //
+                If (iMode=DFC_CLOSE_OUTPUT)                     Close_Output    channel iChannel
+                If (iMode=DFC_CLOSE_INPUT)                      Close_Input     channel iChannel
+                If ((iMode=DFC_READ)or(iMode=DFC_READLN))       Begin
+                                                                Read            channel iChannel sValue
+                                                                Set Var_Value sToken (&iToken) to sValue
+                End
+                If iReadBlock Begin
+                    If (iMode=DFC_READ_BLOCK) Begin
+                        Read_Block channel iChannel         sValue iSize
+                        Set Var_Value sReadVar (&iToken) to sValue
+                    End
+                    If (iMode=DFC_READ_HEX) Begin
+                        Read_Hex  channel iChannel          sValue iSize
+                        Set Var_Value sReadVar (&iToken) to sValue
+                    End
+                End
+                If (Length(sValue)) Begin
+                    If (iMode=DFC_DIRECT_INPUT)                 Direct_Input    channel iChannel sValue
+                    If (iMode=DFC_APPEND_OUTPUT)                Append_Output   channel iChannel sValue
+                    If (iMode=DFC_DIRECT_OUTPUT)                Direct_Output   channel iChannel sValue
+                    If ((iMode=DFC_SHOW)or(iMode=DFC_SHOWLN))   Show                             sValue
+                    If ((iMode=DFC_WRITE)or(iMode=DFC_WRITELN)) Write           channel iChannel sValue
+                    If (iMode=DFC_WRITE_HEX)                    Write_Hex       channel iChannel sValue
+                End
+            End // Not a New line
+        Loop
+        If (iMode=DFC_SHOWLN)  Showln
+        If (iMode=DFC_WRITELN) Writeln channel iChannel
+        If (iMode=DFC_READLN)  Readln  channel iChannel
+        Function_Return iToken
+    End_Function
+    //
+    Function GetSetSend_Statement Integer iCommand Integer iToken Returns Integer
+        // Script Scope
+        tDFSScope[] ltDFSScopes
+        tDFSToken[] ltDFSTokens
+        Integer     iScope iReturnValue iScopeType
+        String[]    sParameters
+        String[]    lsReturnValues
+        // Call
+        String sToken sValue sResult sVariable
+        String  sPar0  sPar1  sPar2  sPar3  sPar4  sPar5  sPar6  sPar7  sPar8  sPar9
+        String  sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19
+        Integer iSymbol iMsg iObj iNumArguments iVariable
+        Move 0  to iNumArguments
+        Move 0  to iObj
+        Move -1 to iScope
+        Increment iToken // Message Name
+        Move gtDFSTokens[iToken].sImage  to sToken        
+        Move gtDFSTokens[iToken].iSymbol to iSymbol
+        If (iSymbol=DFT_SCOPE) Begin
+            If (Mid(sToken, 1, 4)="$") Begin
+                Get ptDFSScopes to ltDFSScopes
+                Move (Right(sToken, Length(sToken)-4)) to iScope
+                If (iScope>=0) Move ltDFSScopes[iScope].iType to iScopeType
+                If ((iScopeType=DFC_FUNCTION)and(iCommand=DFC_SEND)) Move (-1) to iScope
+            End
+        End
+        If (iScope<0) Begin
+            If (iCommand=DFC_SET)  Move (eval("SET_"+sToken)) to iMsg
+            If (iCommand=DFC_GET)  Move (eval("GET_"+sToken)) to iMsg
+            If (iCommand=DFC_SEND) Move (eval("MSG_"+sToken)) to iMsg
+        End
+        // Parameters
+        While ((iSymbol<>DFT_NEWLINE)and(iSymbol<>DFT_EOF))
+            Increment iToken // Value
+            Move gtDFSTokens[iToken].sImage  to sToken
+            Move gtDFSTokens[iToken].iSymbol to iSymbol
+            // Skip ITEM|FIELD|FILE_FIELD
+            If ((iSymbol>=DFW_ITEM)and(iSymbol<=DFW_FILE_FIELD)) Begin
+                // Got ot the next token
+                Increment iToken // Value
+                Move gtDFSTokens[iToken].sImage  to sToken
+                Move gtDFSTokens[iToken].iSymbol to iSymbol
+            End
+            If (iSymbol=DFW_TO) Begin
+                If ((iCommand=DFC_SET)or(iCommand=DFC_GET)) Begin
+                    Increment iToken // Value
+                    Move gtDFSTokens[iToken].sImage  to sToken
+                    Move gtDFSTokens[iToken].iSymbol to iSymbol
+                    If (iScopeType<>DFC_SET) Begin
+                        Move sToken  to sVariable
+                        Move iSymbol to iVariable
+                    End
+                    Else Begin
+                        Get GetScriptValue iSymbol sToken (&iToken) to sValue
+                        Increment iNumArguments
+                        If ((Left(sValue,1)='"')or(Left(sValue,1)="'")) Begin
+                            Move (Left(sValue, Length(sValue)-1)) to sValue
+                            Move (Right(sValue, Length(sValue)-1)) to sValue
+                        End
+                        Move sValue to sParameters[SizeOfArray(sParameters)]
+                    End
+                End
+            End
+            Else If (iSymbol<>DFW_OF) Begin
+                If (iSymbol<>DFT_NEWLINE) Begin
+                    Get GetScriptValue iSymbol sToken (&iToken) to sValue
+                    Increment iNumArguments
+                    If ((Left(sValue,1)='"')or(Left(sValue,1)="'")) Begin
+                        Move (Left(sValue, Length(sValue)-1)) to sValue
+                        Move (Right(sValue, Length(sValue)-1)) to sValue
+                    End
+                    // Up to 20 Parameters Supported
+                    If (iScope<0) Begin
+                        If (iNumArguments=1) Move sValue to sPar0
+                        If (iNumArguments=2) Move sValue to sPar1
+                        If (iNumArguments=3) Move sValue to sPar2
+                        If (iNumArguments=4) Move sValue to sPar3
+                        If (iNumArguments=5) Move sValue to sPar4
+                        If (iNumArguments=6) Move sValue to sPar5
+                        If (iNumArguments=7) Move sValue to sPar6
+                        If (iNumArguments=8) Move sValue to sPar7
+                        If (iNumArguments=9) Move sValue to sPar8
+                        If (iNumArguments=10) Move sValue to sPar9
+                        If (iNumArguments=11) Move sValue to sPar10
+                        If (iNumArguments=12) Move sValue to sPar11
+                        If (iNumArguments=13) Move sValue to sPar12
+                        If (iNumArguments=14) Move sValue to sPar13
+                        If (iNumArguments=15) Move sValue to sPar14
+                        If (iNumArguments=16) Move sValue to sPar15
+                        If (iNumArguments=17) Move sValue to sPar16
+                        If (iNumArguments=18) Move sValue to sPar17
+                        If (iNumArguments=19) Move sValue to sPar18
+                        If (iNumArguments=20) Move sValue to sPar19
+                    End
+                    Else Move sValue to sParameters[iNumArguments-1]
+                End
+            End
+            Else Begin
+                Increment iToken // Of
+                Move gtDFSTokens[iToken].sImage  to sToken
+                Move gtDFSTokens[iToken].iSymbol to iSymbol
+                Get GetScriptValue iSymbol sToken (&iToken) to sValue
+                If (sValue="") Move (eval(sToken))    to iObj
+                Else           Move (Integer(sValue)) to iObj
+            End
+        Loop
+    
+        If (iMsg) Begin
+            If (iCommand=DFC_SET)  Begin
+                Get GetScriptValue iVariable sVariable (&iToken) to sResult
+                If ((Left(sResult,1)='"')or(Left(sResult,1)="'")) Begin
+                    Move (Left(sResult, Length(sResult)-1))  to sResult
+                    Move (Right(sResult, Length(sResult)-1)) to sResult
+                End
+                If (iNumArguments=0) Begin
+                    If (iObj) Set iMsg of iObj to sResult
+                    Else      Set iMsg         to sResult
+                End
+                Else If (iNumArguments=1) Begin
+                    If (iObj) Set iMsg of iObj sPar0 to sResult
+                    Else      Set iMsg         sPar0 to sResult
+                End
+                Else If (iNumArguments=2) Begin
+                    If (iObj) Set iMsg of iObj sPar0 sPar1 to sResult
+                    Else      Set iMsg         sPar0 sPar1 to sResult
+                End
+                Else If (iNumArguments=3) Begin
+                    If (iObj) Set iMsg of iObj sPar0 sPar1 sPar2 to sResult
+                    Else      Set iMsg         sPar0 sPar1 sPar2 to sResult
+                End
+                Else If (iNumArguments=4) Begin
+                    If (iObj) Set iMsg of iObj sPar0 sPar1 sPar2 sPar3 to sResult
+                    Else      Set iMsg         sPar0 sPar1 sPar2 sPar3 to sResult
+                End
+                Else If (iNumArguments=5) Begin
+                    If (iObj) Set iMsg of iObj sPar0 sPar1 sPar2 sPar3 sPar4 to sResult
+                    Else      Set iMsg         sPar0 sPar1 sPar2 sPar3 sPar4 to sResult
+                End
+                Else Begin
+                    If (iObj) Begin
+                              Set iMsg of iObj sPar0  sPar1  sPar2  sPar3  sPar4  sPar5  sPar6  sPar7  sPar8  sPar9 ;
+                                              sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19 to sResult
+                    End
+                    Else      Set iMsg         sPar0  sPar1  sPar2  sPar3  sPar4  sPar5  sPar6  sPar7  sPar8  sPar9 ;
+                                              sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19 to sResult
+                End
+            End
+            If (iCommand=DFC_GET)  Begin
+                // Listing all of parameters does not work
+                If (iNumArguments=0) Begin
+                    If (iObj) Get iMsg of iObj to sResult
+                    Else      Get iMsg         to sResult
+                End
+                Else If (iNumArguments=1) Begin
+                    If (iObj) Get iMsg of iObj sPar0 to sResult
+                    Else      Get iMsg         sPar0 to sResult
+                End
+                Else If (iNumArguments=2) Begin
+                    If (iObj) Get iMsg of iObj sPar0 sPar1 to sResult
+                    Else      Get iMsg         sPar0 sPar1 to sResult
+                End
+                Else If (iNumArguments=3) Begin
+                    If (iObj) Get iMsg of iObj sPar0 sPar1 sPar2 to sResult
+                    Else      Get iMsg         sPar0 sPar1 sPar2 to sResult
+                End
+                Else If (iNumArguments=4) Begin
+                    If (iObj) Get iMsg of iObj sPar0 sPar1 sPar2 sPar3 to sResult
+                    Else      Get iMsg         sPar0 sPar1 sPar2 sPar3 to sResult
+                End
+                Else If (iNumArguments=5) Begin
+                    If (iObj) Get iMsg of iObj sPar0 sPar1 sPar2 sPar3 sPar4 to sResult
+                    Else      Get iMsg         sPar0 sPar1 sPar2 sPar3 sPar4 to sResult
+                End
+                Else Begin
+                    If (iObj) Get iMsg of iObj  sPar0  sPar1  sPar2  sPar3  sPar4  sPar5  sPar6  sPar7  sPar8  sPar9 ;
+                                               sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19 to sResult
+                    Else      Get iMsg          sPar0  sPar1  sPar2  sPar3  sPar4  sPar5  sPar6  sPar7  sPar8  sPar9 ;
+                                               sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19 to sResult
+                End
+                If (iVariable=DFT_ID)         Set  Var_Value     sVariable (&iToken) to sResult
+                If (iVariable=DFT_FILEFIELD)  Send SetFieldValue sVariable (&iToken)    sResult
+            End
+            If (iCommand=DFC_SEND) Begin
+                If (iObj) Send iMsg to iObj sPar0  sPar1  sPar2  sPar3  sPar4  sPar5  sPar6  sPar7  sPar8  sPar9 ;
+                                           sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19
+                Else      Send iMsg         sPar0  sPar1  sPar2  sPar3  sPar4  sPar5  sPar6  sPar7  sPar8  sPar9 ;
+                                           sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19
+            End
+        End
+        Else If iScope Begin
+            Move gtDFSTokens                     to ltDFSTokens
+            Move ltDFSScopes[iScope].atTokens    to gtDFSTokens
+            Set psScriptParameters               to sParameters
+            Get Exec_Script iScope iNumArguments to iReturnValue
+            If (iVariable) Begin
+                Get psReturnValue to sResult
+                If (iVariable=DFT_ID)         Set  Var_Value     sVariable (&iToken) to sResult
+                If (iVariable=DFT_FILEFIELD)  Send SetFieldValue sVariable (&iToken)    sResult
+            End
+            Send Clear_Script
+            Move ltDFSTokens                     to gtDFSTokens
+        End
+        Function_Return iToken
+    End_Function
+    //
+    // DDCOMMAND [Options]|[dbFiles]
+    Function dbFile_Statement Integer iMode Integer iToken Returns Integer
+        String sToken
+        Integer iSymbol iFile iCloseMode
+        Move -1        to iCloseMode
+        Move 999999999 to iSymbol
+        While ((iSymbol<>DFT_NEWLINE)and(iSymbol<>DFT_EOF))
+            // Get file number
+            Increment iToken
+            Move gtDFSTokens[iToken].sImage                 to sToken
+            Move gtDFSTokens[iToken].iSymbol                to iSymbol
+            If (iSymbol=DFS_FILE)    Move sToken            to iFile
+            If (iSymbol=DFT_ID)      Get  Var_Value sToken (&iToken) to iFile
+            If (iSymbol=DFT_INTEGER) Move (Integer(sToken)) to iFile
+            If (iSymbol=DFW_DF_ALL)  Begin
+                Move -1                                     to iFile
+                Move gtDFSTokens[iToken+1].sImage           to sToken
+                Move gtDFSTokens[iToken+1].iSymbol          to iSymbol
+                If (iSymbol=DFW_DF_PERMANENT) ;
+                     Move (DF_PERMANENT)                    to iCloseMode
+                If (iSymbol=DFW_DF_TEMPORARY) ;
+                     Move (DF_TEMPORARY)                    to iCloseMode
+            End
+            // Database File Operation
+            If (iFile) Begin
+                If (iMode=DFC_CLEAR) Begin
+                    If (iFile<0)                Clear       DF_ALL
+                    Else                        Clear       iFile
+                End
+                If (iMode=DFC_CLOSE) Begin
+                    If (iFile<0) Begin
+                        If (iCloseMode=-1)      Close       DF_ALL
+                        Else                    Close       DF_ALL iCloseMode
+                    End
+                    Else                        Close       iFile
+                End
+                If (iFile>0) Begin
+                    If (iMode=DFC_RELATE)       Relate      iFile
+                    If (iMode=DFC_REREAD)       Reread      iFile
+                    If (iMode=DFC_SAVE)         Save        iFile
+                    If (iMode=DFC_SAVERECORD)   SaveRecord  iFile
+                    If (iMode=DFC_DELETE)       Delete      iFile
+                    If (iMode=DFC_ATTACH)       Attach      iFile
+                End
+            End
+            Else Begin
+                If (iMode=DFC_REREAD)           Reread
+                If (iMode=DFC_UNLOCK)           Unlock
+                If (iMode=DFC_LOCK)             Lock
+            End
+        Loop
+        Function_Return iToken
+    End_Function
+    //
+    Function Find_Statement Integer iToken Returns Integer
+        Integer iSym 
+        Integer iMode iFile iIndex iSymbol
+        String  sToken
+        // Find mode
+        Increment iToken
+        Move gtDFSTokens[iToken].sImage  to sToken
+        Move gtDFSTokens[iToken].iSymbol to iSymbol
+        If (iSymbol=DFO_GE) Move (GE) to iMode
+        If (iSymbol=DFO_GT) Move (GT) to iMode
+        If (iSymbol=DFO_EQ) Move (EQ) to iMode
+        If (iSymbol=DFO_LE) Move (LE) to iMode
+        If (iSymbol=DFO_LT) Move (LT) to iMode
+        // File for find
+        Increment iToken
+        Move gtDFSTokens[iToken].sImage  to sToken
+        Move gtDFSTokens[iToken].iSymbol to iSymbol
+        Move sToken to iFile
+        // "By"
+        Increment iToken
+        // Index
+        Increment iToken
+        Move gtDFSTokens[iToken].sImage  to sToken
+        Move gtDFSTokens[iToken].iSymbol to iSymbol
+        If (iSymbol=DFW_RECNUM)  Move 0 to iIndex
+        If ((iSymbol>=DFW_INDEX_1)and(iSymbol<=DFW_INDEX_15)) Begin
+            Move (Uppercase(sToken)) to sToken
+            Move (Integer(Replace("INDEX.", sToken, ""))) to iIndex
+        End
+        //
+        Vfind iFile iIndex iMode
+        Function_Return iToken
+    End_Function
+    //
+    Function DBTrans_Statement Integer iMode Integer iToken Returns Integer
+        If (iMode=DFC_BEGIN_TRANSACTION) Begin_Transaction
+        If (iMode=DFC_END_TRANSACTION)   End_Transaction
+        Function_Return iToken
+    End_Function
+    //
+    // FOR {Variable} FROM {CONST|VARIABLE} TO {CONST|VARIABLE}
+    // LOOP
+    Function For_Statement Integer iToken Returns Integer
+        String sToken sValue sVar
+        Integer iSymbol
+        Integer iFor iFrom iTo iVal iVarToken
+        Integer iStart iStopToken
+        //
+        Move gtDFSTokens[iToken].sImage   to sToken
+        Move (Right(sToken, Length(sToken)-Pos("$", sToken))) to iStopToken
+        // {Variable}
+        Increment iToken // For Var
+        Move iToken to iVarToken
+        Move gtDFSTokens[iToken].sImage to sVar
+        // FROM
+        Increment iToken
+        // {CONST|VARIABLE}
+        Increment iToken // iFrom
+        Move gtDFSTokens[iToken].sImage  to sToken
+        Move gtDFSTokens[iToken].iSymbol to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to iVal //sValue
+        Move iVal to iFrom
+        // TO
+        Increment iToken // To
+        // {CONST|VARIABLE}
+        Increment iToken // iTo
+        Move gtDFSTokens[iToken].sImage         to sToken
+        Move gtDFSTokens[iToken].iSymbol        to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to iVal //sValue
+        Move iVal to iTo
+        //
+        Move iToken to iStart
+        For iFor from iFrom to iTo
+            Set Var_Value sVar (&iToken) to iFor
+            Get Process_Block iStart iStopToken to iToken
+        Loop
+        Function_Return iToken
+    End_Function
+    //
+    // Increment/Decrement Statement
+    // INCREMENT|DECREMENT (Value)
+    Function IncDec_Statement Integer iMode Integer iToken Returns Integer
+        String  sToken sValue
+        Integer iSymbol iValue iStart
+        Increment iToken
+        Move gtDFSTokens[iToken].sImage   to sToken
+        Move gtDFSTokens[iToken].iSymbol  to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to iValue //sValue
+        If (iMode=DFC_INCREMENT)          Increment iValue
+        If (iMode=DFC_DECREMENT)          Decrement iValue
+        If (iSymbol=DFT_ID)               Set Var_Value      sToken (&iToken) to iValue
+        If (iSymbol=DFT_FILEFIELD)        Send SetFieldValue sToken (&iToken)    iValue
+        Function_Return iToken
+    End_Function
+    //
+    // Script Error Statement
+    // ERROR (ErrorNumber) (ErrorText)
+    Function Error_Statement Integer iToken Returns Integer
+        String  sToken sError
+        Integer iSymbol iError iStart
+        // Error Number
+        Increment iToken
+        Move gtDFSTokens[iToken].sImage   to sToken
+        Move gtDFSTokens[iToken].iSymbol  to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to iError
+        // Error Text
+        Increment iToken
+        Move gtDFSTokens[iToken].sImage   to sToken
+        Move gtDFSTokens[iToken].iSymbol  to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to sError
+        Error iError sError
+        Function_Return iToken
+    End_Function
+    //
+    // REPEAT
+    // UNTIL (Expression)
+    Function Repeat_Statement Integer iToken Returns Integer
+        String  sToken sValue
+        Integer iSymbol iValue iStart iStopToken
+        //
+        Move gtDFSTokens[iToken].sImage   to sToken
+        Move (Right(sToken, Length(sToken)-Pos("$", sToken))) to iStopToken
+        // REPEAT
+        Move iToken to iStart
+        // Process Body to UNTIL statement
+        Get Process_Block iStart iStopToken to iToken
+        //
+        Increment iToken // Value
+        Move gtDFSTokens[iToken].sImage   to sToken
+        Move gtDFSTokens[iToken].iSymbol  to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to iValue
+        If (iValue) Get Repeat_Statement iStart to iToken
+        Function_Return iToken
+    End_Function
+    //
+    // WHILE {Expression}
+    // LOOP
+    Function While_Statement Integer iToken Returns Integer
+        String  sToken sValue
+        Integer iSymbol iValue iStart iStopToken
+        //
+        Move gtDFSTokens[iToken].sImage   to sToken
+        Move (Right(sToken, Length(sToken)-Pos("$", sToken))) to iStopToken
+        //
+        Move iToken to iStart
+        Increment iToken // Value
+        Move gtDFSTokens[iToken].sImage   to sToken
+        Move gtDFSTokens[iToken].iSymbol  to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to iValue
+        If (iValue) Begin
+            Get Process_Block iStart iStopToken to iToken
+            Get While_Statement iStart to iToken
+        End
+        Else Move iStopToken to iToken
+        Function_Return iToken
+    End_Function
+    //
+    Function Process_Else Integer iToken Returns Integer
+        Integer iSymbol iStopToken
+        String  sToken
+        Increment iToken
+        Move gtDFSTokens[iToken].iSymbol  to iSymbol
+        Move gtDFSTokens[iToken].sImage   to sToken
+        // Skip ELSE BEGIN to END<EOL> and move to the next line
+        If (iSymbol=DFC_BEGIN) 
+             Move (Right(sToken, Length(sToken)-Pos("$", sToken))+1)    to iToken
+        Else Begin
+            // 1. Skip Else Command
+            Get   Skip_Tokens iToken DFT_NEWLINE                        to iToken
+            // 2. Check either Begin started and skip whole block
+            Move gtDFSTokens[iToken-1].sImage to sToken
+            If (gtDFSTokens[iToken-1].iSymbol=DFC_BEGIN) ;
+                Move (Right(sToken, Length(sToken)-Pos("$", sToken))+1) to iToken
+        End
+        If (gtDFSTokens[iToken+1].iSymbol=DFC_ELSE) Begin
+            Increment iToken // ELSE
+            Increment iToken // Command|Begin
+            Move gtDFSTokens[iToken].iSymbol  to iSymbol
+            If (iSymbol=DFF_IF) Move DFC_IF to iSymbol
+            // Coomand|Begin
+            If (iSymbol<>DFC_BEGIN) Get Exec_Command iSymbol iToken to iToken
+            Else Begin
+                Move gtDFSTokens[iToken].sImage   to sToken
+                Move (Right(sToken, Length(sToken)-Pos("$", sToken))) to iStopToken
+                Get Process_Block iToken iStopToken to iToken
+                // DFC_END
+                Increment iToken
+                // <EOL>
+                Increment iToken
+            End
+        End
+        Function_Return iToken
+    End_Function
+    //
+    // If/Else statement processing...
+    // IF|IFNOT (Expression) Command|Begin
+    // ELSE Command|Begin
+    Function IfElse_Statement Integer iMode Integer iToken Returns Integer
+        String  sToken sValue
+        Integer iSymbol iValue iStopToken
+        // Calc Expression
+        Increment iToken // Value
+        Move gtDFSTokens[iToken].sImage             to sToken
+        Move gtDFSTokens[iToken].iSymbol            to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to iValue
+        // IfNot command, then reverse result
+        If (iMode=DFC_IFNOT) Move (not(iValue))     to iValue
+        // If TRUE
+        If (iValue) Begin
+            Increment iToken
+            Move gtDFSTokens[iToken].iSymbol  to iSymbol
+            // Coomand|Begin
+            If (iSymbol<>DFC_BEGIN) Begin
+                Get Exec_Command iSymbol iToken to iToken
+                // <EOL>
+                Increment iToken
+                // ELSE?
+                If (gtDFSTokens[iToken+1].iSymbol=DFC_ELSE) Increment iToken
+            End
+            Else Begin
+                Move gtDFSTokens[iToken].sImage   to sToken
+                Move (Right(sToken, Length(sToken)-Pos("$", sToken))) to iStopToken
+                Get Process_Block iToken iStopToken to iToken
+                // DFC_END
+                Increment iToken
+                // <EOL>
+                Increment iToken
+            End
+            // Else Command
+            If (gtDFSTokens[iToken].iSymbol=DFC_ELSE) ;
+                Get Process_Else iToken to iToken
+            Else Decrement iToken // Go back as no Else command found
+        End
+        Else    Get Process_Else iToken to iToken
+        //
+        Function_Return iToken
+    End_Function
+    //
+    // Scope command execute
+    Function Exec_Command Integer iSymbol Integer iToken Returns Integer
+        String  sFile sToken
+        Integer iFile iOk
+        // MOVE commands
+        If ((iSymbol>DFC_MOVE$START)and(iSymbol<DFC_MOVE$STOP)) ;
+                                                Get Move_Statement       iSymbol iToken to iToken
+        // IO Commands
+        If ((iSymbol>DFC_IO$START)and(iSymbol<DFC_IO$STOP)) ;
+                                                Get InOutput_Statement   iSymbol iToken to iToken
+        // DB Command
+        If ((iSymbol>DFC_DB$START)and(iSymbol<DFC_DB$STOP)) ;
+                                                Get dbFile_Statement     iSymbol iToken to iToken
+        //
+        If (iSymbol=DFC_FIND)                   Get Find_Statement               iToken to iToken
+        If (iSymbol=DFC_BEGIN_TRANSACTION)      Get DBTrans_Statement    iSymbol iToken to iToken
+        If (iSymbol=DFC_END_TRANSACTION)        Get DBTrans_Statement    iSymbol iToken to iToken
+        //
+        If (iSymbol=DFC_IF)                     Get IfElse_Statement     iSymbol iToken to iToken
+        If (iSymbol=DFC_IFNOT)                  Get IfElse_Statement     iSymbol iToken to iToken
+        //
+        If (iSymbol=DFC_REPEAT)                 Get Repeat_Statement             iToken to iToken
+        If (iSymbol=DFC_WHILE)                  Get While_Statement              iToken to iToken
+        If (iSymbol=DFC_FOR)                    Get For_Statement                iToken to iToken
+        //
+        If (iSymbol=DFC_SET)                    Get GetSetSend_Statement iSymbol iToken to iToken
+        If (iSymbol=DFC_GET)                    Get GetSetSend_Statement iSymbol iToken to iToken
+        If (iSymbol=DFC_SEND)                   Get GetSetSend_Statement iSymbol iToken to iToken
+        //
+        If (iSymbol=DFC_SCRIPT_RETURN)          Get Return_Statement             iToken to iToken
+        If (iSymbol=DFC_FUNCTION_RETURN)        Get Return_Statement             iToken to iToken
+        If (iSymbol=DFC_PROCEDURE_RETURN)       Get Return_Statement             iToken to iToken
+        //
+        If (iSymbol=DFC_SYSDATE)                Get SysDate_Statement            iToken to iToken
+        If (iSymbol=DFC_SLEEP)                  Get Sleep_Statement              iToken to iToken
+        If (iSymbol=DFC_ERROR)                  Get Error_Statement              iToken to iToken
+        If (iSymbol=DFC_GET_ATTRIBUTE)          Get GetSetAttr_Statement iSymbol iToken to iToken
+        If (iSymbol=DFC_SET_ATTRIBUTE)          Get GetSetAttr_Statement iSymbol iToken to iToken
+        If (iSymbol=DFC_ABORT)     Begin
+            #IFNDEF Is$WebApp
+            Get YesNo_Box "Script requests to abort the application. Proceed?" "Abort" MBR_NO to iOk
+            If (iOk=MBR_YES) Abort
+            #ENDIF
+        End
+        Function_Return iToken
+    End_Function
+    // Script scope execution
+    Function Exec_Script Integer iScope Integer iNumArguments Returns Integer
+        Integer iCurrentScope iLastIfExpr iReturnFlag iLastToken iScopeParameter
+        String[] sScriptParameters
+        tDFSToken[] ltDFSTokens
+        Integer iParameter iParameters
+        Integer iVariable  iVariables
+        Integer iToken     iTokens
+        Integer iSymbol
+        tDFSVariable[]     ltVariables
+        Get ptVariables to ltVariables
+        // Before Clear, read possible parameters
+        Get psScriptParameters to sScriptParameters
+        //
+        Move gtDFSTokens            to ltDFSTokens
+        Move DFS$CURRENT$SCOPE      to iCurrentScope
+        Move giScript$Return$Flag   to iReturnFlag
+        //
+        Send Clear_Script
+        Move iScope to DFS$CURRENT$SCOPE
+        //
+        // Process parameters
+        Move (SizeOfArray(sScriptParameters)) to iParameters
+        If (iNumArguments<iParameters) Begin
+            Showln "Required script argument missed"
+            Function_Return 1
+        End
+        Else Move iNumArguments to iParameters
+        //
+        If (iParameters>0) Begin
+            For iParameter from 0 to (iParameters-1)
+                Move (SizeOfArray(ltVariables)) to iVariables
+                Move 0 to iScopeParameter
+                For iVariable from 0 to (iVariables-1)
+                    If (ltVariables[iVariable].iScope=iScope) Begin
+                        If (iParameter=iScopeParameter) ;
+                            Move sScriptParameters[iParameter] to ltVariables[iVariable].sValue
+                        Increment iScopeParameter
+                    End
+                Loop
+            Loop
+            Set ptVariables to ltVariables
+        End
+        //
+        Move (SizeOfArray(gtDFSTokens)) to iTokens
+        If (iTokens=0) Function_Return 1 // Nothing to execute, script is not compiled or does not contain any lines
+        //
+        Move 999999999 to iSymbol
+        While ((iSymbol<>DFT_EOF)and(iToken<iTokens))
+            Move gtDFSTokens[iToken].iSymbol to iSymbol
+            If (iSymbol<>DFT_NEWLINE) Get Exec_Command iSymbol iToken to iToken
+            If giScript$Return$Flag Begin
+                Move DFT_EOF to iSymbol
+                Increment iToken
+                Move ltDFSTokens    to gtDFSTokens
+                Move iCurrentScope  to DFS$CURRENT$SCOPE
+                Move iReturnFlag    to giScript$Return$Flag
+                Function_Return 0
+            End
+            Increment iToken
+        Loop
+        //
+        Move ltDFSTokens    to gtDFSTokens
+        Move iCurrentScope  to DFS$CURRENT$SCOPE
+        Move iReturnFlag    to giScript$Return$Flag
+        //
+        Function_Return 0
+    End_Function
+    // Executes script by name. If name is not specified, DFS_DESKTOP scope is executed.
+    // Otherwise scope by name (Procedure or Function)
+    Procedure DFS_Exec String sScriptName
+        Handle      hoObject
+        Handle[]    hoObjects hDummy
+        Integer     iScriptScope iScope iScopes iRetVal 
+        Integer     iObject iObjects iClass
+        String      sName
+        tDFSScope   ltDFSScope
+        tDFSScope[] ltDFSScopes
+        String[]    lsReturnValues
+        Get ptDFSScopes to ltDFSScopes
+        // Nothing to execute, script is not compiled or does not contain any lines
+        Move (SizeOfArray(ltDFSScopes)) to iScopes
+        If (iScopes=0) Procedure_Return
+        // Pre-compile script has errors and can not be executed
+        If (piErrorsCount(Self)) Procedure_Return
+        // Identify current scope to be executed
+        If (sScriptName="") Move 0 to iScriptScope
+        Else Begin
+            // Must have a prefix "GET_"
+            Move (Uppercase(sScriptName))               to ltDFSScope.sName
+            Move (SearchArray(ltDFSScope, ltDFSScopes)) to iScriptScope
+            // Scope not found (Invalid name provided)
+            If (iScope<0) Begin
+                Error 500 ("Script" * ltDFSScope.sName * "not found.")
+                Procedure_Return 
+            End
+        End
+        //
+        // Create defined objects if any
+        Get piObjectsCount to iObjects
+        If (iObjects) Begin
+            For iScope from 0 to (iScopes-1)
+                If (ltDFSScopes[iScope].iType=DFC_OBJECT) Begin
+                    Move ltDFSScopes[iScope].atTokens[0].sImage to sName
+                    Move ltDFSScopes[iScope].atTokens[1].sImage to iClass
+                    If iClass Begin
+                        Get CreateNamed iClass sName to hoObject
+                        Move hoObject to hoObjects[SizeOfArray(hoObjects)]
+                        Move ("OBJ$"+String(hoObject)) to gtDFSScopes[iScope].atTokens[0].sImage
+                    End
+                End
+            Loop
+            //Set ptDFSScopes to ltDFSScopes
+        End
+        //
+        Move ltDFSScopes[iScriptScope].atTokens to gtDFSTokens
+        //
+        Get Exec_Script iScriptScope ltDFSScopes[iScriptScope].iNumArguments to iRetVal
+        //
+        // Destroy all created objects
+        For iObject from 0 to (SizeOfArray(hoObjects)-1)
+            Send Destroy to hoObjects[iObject]
+        Loop
+        Move hDummy to hoObjects
+        //
+    End_Procedure
+End_Class

@@ -1,0 +1,24 @@
+// System Attributes DataFlex Scriptor Package
+// This file defines set of the predefined constants to retrieve general attributes
+// Constants are run-time pre-defined
+//
+
+// Attributes
+Define dfsDateFormat     for C_dfsDateFormat
+Define dfsDateSep        for C_dfsDateSep
+Define dfsDecimalSep     for C_dfsDecimalSep
+Define dfsThousandSep    for C_dfsThousandSep
+Define dfsOpenPath       for C_dfsOpenPath
+Define dfsFileList       for C_dfsFileList
+Define dfsDataIntegrity  for C_dfsDataIntegrity
+Define dfsLockDelay      for C_dfsLockDelay
+Define dfsLockTimeOut    for C_dfsLockTimeOut
+Define dfsNumberDrivers  for C_dfsNumberDrivers
+// Dataflex
+Define dfsDFVerion       for C_dfsDFVerion
+Define dfsDFRegName      for C_dfsDFRegName
+Define dfsDFSerial       for C_dfsDFSerial
+// Is WebApp
+Define dfsIsWebApp       for C_dfsIsWebApp
+
+Use SysLocale.dp

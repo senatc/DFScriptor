@@ -1,0 +1,21 @@
+// System Locales DataFlex Scriptor Package
+// This file defines set of the predefined constants to retrieve general attributes
+// Constants are run-time pre-defined
+//
+
+// Current Language
+Define dfsLanguage       for C_dfsLanguage   
+Define dfsEngLanguage    for C_dfsEngLanguage
+// Country
+Define dfsCountryName    for C_dfsCountryName
+Define dfsEngCountry     for C_dfsEngCountry 
+Define dfsCountry        for C_dfsCountry    
+// Code Pages
+Define dfsANSIPage       for C_dfsANSIPage   
+Define dfsCodePage       for C_dfsCodePage   
+// User/Computer Name
+Define dfsUserName       for C_dfsUserName
+Define dfsComputerName   for C_dfsComputerName
+// Temp Path
+Define dfsTempPath       for C_dfsTempPath
+Define dfsLongTempPath   for C_dfsLongTempPath

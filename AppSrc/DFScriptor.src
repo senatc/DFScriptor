@@ -1,0 +1,378 @@
+Use DFAllEnt.pkg
+Use cCJStandardCommandBarSystem.pkg
+
+Object oHtmlHelp is a cHtmlHelp
+End_Object
+
+Object oApplication is a cApplication
+    Set peHelpType to htHtmlHelp
+End_Object
+
+Object oToolTipController is a cToolTipController
+    Move Self to ghoToolTipController
+End_Object
+
+Use oEditContextMenu.pkg
+Use oDEOEditContextMenu17.pkg
+
+Object oMain is a Panel
+    Set Label to "DataFlex Scriptor"
+    Set Location to 7 2
+    Set Size to 350 550
+    Set Icon to "Scriptor64.ico"
+
+    Object oCommandBarSystem is a cCJCommandBarSystem
+        Set pbTimerUpdate to True
+        Set pbEnableCustomization to True
+
+        Procedure OnCreateCommandBars
+            Handle hoOptions
+            Get OptionsObject to hoOptions
+            Forward Send OnCreateCommandBars
+        End_Procedure
+
+        Object oMenuBar is a cCJMenuBar
+            Set pbCustomizable to True
+
+            Object oFileMenu is a cCJMenuItem
+                
+                Set peControlType to xtpControlPopup          
+                Set psCaption   to "&File"
+                Set psDescription to "Find, Save, Delete, Clear information or quit this application."
+                Set psCategory to "Menus"
+    
+                Object oClearMenuItem is a cCJClearMenuItem
+                    Set pbAddToDesignerMenu to True
+                End_Object
+    
+                Object oClearAllMenu is a cCJClearAllMenuItem
+                    Set pbAddToDesignerMenu to True
+                End_Object
+    
+                Object oPromptMenuItem is a cCJPromptMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set pbControlBeginGroup to True
+                End_Object
+    
+                Object oFindMenuItem is a cCJFindMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set pbControlBeginGroup to True
+                End_Object
+    
+                Object oFindNextMenu is a cCJFindNextMenuItem
+                    Set pbAddToDesignerMenu to True
+                End_Object
+    
+                Object oFindPreviousMenu is a cCJFindPreviousMenuItem
+                    Set pbAddToDesignerMenu to True
+                End_Object
+    
+                Object oFindFirstMenu is a cCJFindFirstMenuItem
+                    Set pbAddToDesignerMenu to True
+                End_Object
+    
+                Object oFindLastMenu is a cCJFindLastMenuItem
+                    Set pbAddToDesignerMenu to True
+                End_Object
+    
+                Object oSaveMenuItem is a cCJSaveMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set pbControlBeginGroup to True
+                End_Object
+    
+                Object oDeleteMenuItem is a cCJDeleteMenuItem
+                    Set pbAddToDesignerMenu to True
+                End_Object
+    
+                Object oExitMenu is a cCJExitMenuItem
+                    Set pbControlBeginGroup to True
+                End_Object
+    
+            End_Object
+            
+            Procedure OnCreate
+//                Handle hMenuItem hTitle
+//                Get CreateNamed U_cCJMenuItem "oTestItem" to hTitle
+//                Set peControlType   of hTitle to xtpControlPopup
+//                Set psCaption       of hTitle to "&Test Caption"
+//                Set psDescription   of hTitle to "Test menu description"
+//                Set psCategory      of hTitle to "Category"
+//                //
+//                Get CreateNamed of hTitle U_cCJExitMenuItem "oPopupItem" to hMenuItem
+            End_Procedure
+            
+            Object oScriptorMenu is a cCJMenuItem
+                Set peControlType to xtpControlPopup          
+                Set psCaption to "&Scriptor"
+                Set psDescription to "DataFlex Script Management System"
+                Set psCategory to "Menu"
+
+                Object oNewMenuItem is a cCJMenuItem //cCJClearMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set psImage to "New16.bmp"
+                    Set psCaption   to "New script"
+                    Set psToolTip to "Creates new script file"
+                    Set psDescription to "New script"
+                    Set psShortcut to "Ctrl+N"
+                    Procedure OnExecute Variant vCommandBarControl
+                        Handle hoClient
+                        Get Client_Id to hoClient
+                        Send Activate_oDFSDebugger of hoClient
+                        Send mScriptNew to (oDFSDebugger(oClientArea(Self)))
+                    End_Procedure
+                End_Object
+
+                Object oOpenMenuItem is a cCJMenuItem //cCJClearMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set psImage to "Open16.bmp"
+                    Set psCaption   to "Open script"
+                    Set psToolTip to "Opens new script file"
+                    Set psDescription to "Open script"
+                    Set psShortcut to "Ctrl+O"
+                    Procedure OnExecute Variant vCommandBarControl
+                        Handle hoClient
+                        Get Client_Id to hoClient
+                        Send Activate_oDFSDebugger of hoClient
+                        Send mScriptOpen to (oDFSDebugger(oClientArea(Self)))
+                    End_Procedure
+                End_Object
+
+                Object oSaveMenuItem is a cCJMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set psCaption   to "Save"
+                    Set psToolTip to "Save"
+                    Set psDescription to "Save modified script file"
+                    Set psImage to "ActionSave.ico"
+                    Set psShortcut to "F2"
+                
+                    Procedure OnExecute Variant vCommandBarControl
+                        Handle hoClient
+                        Get Client_Id to hoClient
+                        Send Activate_oDFSDebugger of hoClient
+                        Send mScriptSave to (oDFSDebugger(oClientArea(Self)))
+                    End_Procedure
+                    
+                End_Object
+
+                Object oOpenMenuItem is a cCJMenuItem //cCJClearMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set psImage to "Compile16.bmp"
+                    Set psCaption   to "Compile script"
+                    Set psToolTip to "Save and Compile script file"
+                    Set psDescription to "Compile script"
+                    Set psShortcut to "Ctrl+S"
+                    Procedure OnExecute Variant vCommandBarControl
+                        Handle hoClient
+                        Get Client_Id to hoClient
+                        Send Activate_oDFSDebugger of hoClient
+                        Send mScriptCompile to (oDFSDebugger(oClientArea(Self)))
+                    End_Procedure
+                End_Object
+
+                Object oBuildMenuItem is a cCJMenuItem //cCJClearMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set psImage to "Build16.bmp"
+                    Set psCaption   to "Build script"
+                    Set psToolTip to "Build executable script file"
+                    Set psDescription to "Build script"
+                    Set psShortcut to "Ctrl+B"
+                    Procedure OnExecute Variant vCommandBarControl
+                        Handle hoClient
+                        Get Client_Id to hoClient
+                        Send Activate_oDFSDebugger of hoClient
+                        Send mScriptBuild to (oDFSDebugger(oClientArea(Self)))
+                    End_Procedure
+                End_Object
+
+                Object oRunMenuItem is a cCJMenuItem //cCJClearMenuItem
+                    Set pbAddToDesignerMenu to True
+                    Set psImage to "Run16.bmp"
+                    Set psCaption   to "Run script"
+                    Set psToolTip to "Run compiled script file"
+                    Set psDescription to "Run script"
+                    Set psShortcut to "F5"
+                    Procedure OnExecute Variant vCommandBarControl
+                        Handle hoClient
+                        Get Client_Id to hoClient
+                        Send Activate_oDFSDebugger of hoClient
+                        Send mScriptRun to (oDFSDebugger(oClientArea(Self)))
+                    End_Procedure
+                End_Object
+
+                Object oDataFlexScriptDebuggerMenuItem is a cCJMenuItem
+                    Set psCaption to "DataFlex Script Debugger"
+                    Set psTooltip to "DataFlex Script Debugger"
+                    Set pbControlBeginGroup to True
+                
+                    Procedure OnExecute Variant vCommandBarControl
+                        Handle hoClient
+                        Get Client_Id to hoClient
+                        Send Activate_oDFSDebugger of hoClient
+                    End_Procedure
+                End_Object
+
+                Object oExitMenu is a cCJExitMenuItem
+                    Set pbControlBeginGroup to True
+                End_Object
+
+            End_Object
+
+            Object oViewMenu is a cCJMenuItem
+                Set peControlType to xtpControlPopup
+                Set psCaption to "Views"
+                Set psToolTip to "Views"
+                Set psDescription to "Execute script"
+
+                Object oOrderEntryMenuItem is a cCJMenuItem
+                    Set psCaption to "Order Entry Sample View"
+                    Set psTooltip to "Order Entry Sample View"
+                
+                    Procedure OnExecute Variant vCommandBarControl
+                        Handle hoClient
+                        Get Client_Id to hoClient
+                        Send Activate_oOrderEntryView of hoClient
+                    End_Procedure
+                End_Object
+
+            End_Object
+            
+            Object oWindowMenu is a cCJMDIWindowsMenuItem
+                Set peControlType to xtpControlPopup
+                Set psCaption to "&Window"
+                Set psToolTip to "Управление окнами"
+                Set psDescription to "Показывает открытые формы ввода и позволяет установить параметры дисплея."    
+
+                // Это статичные пункты меню. Больше пунктов будет создано в процедуре onInitPopup 
+                Object oDisplayOptionsMenu is a cCJMenuItem
+                    Set peControlType to xtpControlPopup          
+                    Set psCaption to "&Параметры дисплея"
+                    Set psToolTip to "Параметры дисплея"
+                    Set psDescription to "Установка параметров дисплея"
+
+                    Object oStatusbarMenu is a cCJStatusbarMenuItem
+                    End_Object
+
+                    Object oAutoArrangeIconsMenu is a cCJAutoArrangeIconsMenuItem
+                    End_Object
+
+                    Object oRestoreMenusMenu is a cCJRestoreMenusMenuItem
+                        Set pbControlBeginGroup to True
+                    End_Object
+
+                End_Object
+
+                Object oCascadeMenu is a cCJCascadeMenuItem
+                    Set pbControlBeginGroup to True
+                End_Object
+
+                Object oHorizTile is a cCJTileHorizontally
+                End_Object
+
+                Object oVertTile is a cCJTileVertically
+                End_Object
+
+                Object oMinimizeMenuItem is a cCJMinimizeWindowsMenuItem
+                    Set pbControlBeginGroup to True
+                End_Object
+
+                Object oRestoreMenuItem is a cCJRestoreWindowsMenuItem
+                End_Object
+
+                Object oArrangeIconsMenuItem is a cCJAutoArrangeIconsMenuItem
+                    Set pbControlBeginGroup to True
+                End_Object
+
+            End_Object
+
+            Object oHelpMenu is a cCJMenuItem
+                Set peControlType to xtpControlPopup    
+                Set psCaption to "&Help"
+                Set psDescription to "Доступ к справочной информации по использованию этого приложения DataFlex."
+                Set psToolTip to "Помощь"
+
+                Object oAboutMenuItem is a cCJAboutMenuItem
+                End_Object
+
+            End_Object
+
+        End_Object
+
+        Object oEditToolBar is a cCJToolbar
+            Set psTitle to "Панель редактирования"
+
+            Object oCutToolbarItem is a cCJCutMenuItem
+            End_Object
+
+            Object oCopyToolbarItem is a cCJCopyMenuItem
+            End_Object
+
+            Object oPasteToolbarItem is a cCJPasteMenuItem
+            End_Object
+
+            Object oUndoToolbarItem is a cCJUndoMenuItem
+                Set pbControlBeginGroup to True
+            End_Object
+
+            Object oRedoToolbarItem is a cCJMenuItem
+                Set psCaption   to "Redo"
+                Set psToolTip to "Redo"
+                Set psDescription to "Redo last action"
+                Set psImage to "ActionRedo.ico"
+                Set pbActiveUpdate to True
+                Set psCategory to C_$CategoryEdit
+                Set psShortcut to "Ctrl+Y"
+            
+                Procedure OnExecute Variant vCommandBarControl
+                    Send Redo of (focus(Self))
+                End_Procedure
+                
+                Function IsEnabled Returns Boolean
+                    Boolean bEnabled
+                    Get CanRedo of (Focus(Self)) to bEnabled
+                    Function_Return bEnabled
+                End_Function
+            End_Object
+
+
+            Object oDeleteEditToolbarItem is a cCJDeleteEditMenuItem
+                Set pbControlBeginGroup to True
+            End_Object
+
+        End_Object
+
+        Object oStatusBar is a cCJStatusBar
+
+            Object oStatusPane1 is a cCJStatusBarPane
+                Set piID to sbpIDIdlePane
+                Set pbStyleStretch to True
+            End_Object
+
+            Object oStatusPane2 is a cCJStatusBarPane
+                Set phoViewPane to Self
+                Set pbStyleStretch to True
+            End_Object
+
+        End_Object
+
+    End_Object
+
+    Object oClientArea is a ClientArea
+        Use ScriptorAbout.pkg
+        Use DFSDebugger.vw
+        Use Order.vw
+
+        Procedure Activate_About
+            Send DoAbout "DataFlex Scriptor" "v2.0" "(С) 2017, Just for fun" "Sergey V. Natarov" "ScriptLogo48.bmp"
+        End_Procedure
+
+    End_Object
+
+End_Object
+
+Procedure mActivateDebugger
+    Handle hoClient
+    Get Client_Id to hoClient
+    Send Activate_oDFSDebugger of hoClient
+End_Procedure
+
+Start_UI

@@ -1,0 +1,360 @@
+// DataFlex Scriptor Debugger
+// by Sergey V. Natarov
+//
+
+Use dfsparser.pkg
+
+Define DEBUGGER_OBJECT          for 0 //(oDebugger(Client_Area(Main(Self))))
+Define DEBUGGER_ERROR_OBJECT    for 0 //(oErrors(TP_ERRORS(oDlg(oDebugger(Client_Area(Main(Self)))))))
+Define DEBUGGER_SOURCE_OBJECT   for 0 //(oSource(TP_SCRIPT(oDlg(oDebugger(Client_Area(Main(Self)))))))
+Define DEBUGGER_GRAMMAR_OBJECT  for 0 //(oGrammar(TP_GRAMMAR(oDlg(oDebugger(Client_Area(Main(Self)))))))
+Define DEBUGGER_CGT_OBJECT      for 0 //(oCGTInfo(TP_GRAMMAR(oDlg(oDebugger(Client_Area(Main(Self)))))))
+Define DEBUGGER_SYMBOLS_OBJECT  for 0 //(oSymbols(TP_SYMBOLS(oDlg(oDebugger(Client_Area(Main(Self)))))))
+Define DEBUGGER_TOKENS_OBJECT   for 0 //(oTokens(TP_TOKENS(oDlg(oDebugger(Client_Area(Main(Self)))))))
+Define DEBUGGER_TREE_OBJECT     for 0 //(oTree(TP_PARSER_TREE(oDlg(oDebugger(Client_Area(Main(Self)))))))
+//
+Define OUTPUT_ERRORS_FILE       for "Errors.gp"
+Define OUTPUT_TOKENS_FILE       for "Tokens.gp"
+Define OUTPUT_TREE_FILE         for "Tree.gp"
+//
+Define OUTPUT_MODE_NONE         for 0
+Define OUTPUT_MODE_SCREEN       for 1
+Define OUTPUT_MODE_FILE         for 2
+Define OUTPUT_MODE_DEBUGGER     for 3
+//    
+Define OUTPUT_MODE              For 0 //OUTPUT_MODE_DEBUGGER
+
+Procedure ProcessReduction pointer lpReduction integer iLevel
+    Integer iLevels       iCnt        iRSymbol
+    Pointer lpChildRed    
+    String  sSpace        
+    
+    If (not(lpReduction)) Procedure_return
+    //
+    For iCnt from 1 to iLevel
+        Move (sSpace+"  ") to sSpace
+    Loop
+    //
+    Move (fReductionRootCount(lpReduction)) To iLevels
+    If (OUTPUT_MODE=OUTPUT_MODE_SCREEN) Begin
+        If (iLevels) Showln (wchar_t(fLalrSymbol(lpReduction))+"   [ID="+String(fLalrSymIndex(lpReduction))+", "+String(iLevels)+" levels]")
+    End
+    Else Begin
+        Append_Output OUTPUT_TREE_FILE
+        If (iLevels) Writeln sSpace (wchar_t(fLalrSymbol(lpReduction))+"   [ID="+String(fLalrSymIndex(lpReduction))+", "+String(iLevels)+" levels]")
+        Close_Output
+    End
+    //
+    For iCnt from 0 to (iLevels-1)
+        Move (fReductionSymbol(lpReduction, iCnt)) to iRSymbol
+        Move (fReductionChildReduction(lpReduction,iCnt)) to lpChildRed
+        If (iRSymbol) Send ProcessReduction lpChildRed (iLevel+1)
+        Else Begin
+            If (OUTPUT_MODE=OUTPUT_MODE_SCREEN) Showln sSpace (wchar_t(fReductionSymbolText(lpReduction,iCnt))+"   [ID="+String(fReductionSymIndex(lpReduction,iCnt))+"] = "+wchar_t(fReductionImageText(lpReduction,iCnt)))
+            Else Begin
+                Append_Output OUTPUT_TREE_FILE
+                Writeln sSpace (wchar_t(fReductionSymbolText(lpReduction,iCnt))+"   [ID="+String(fReductionSymIndex(lpReduction,iCnt))+"] = "+wchar_t(fReductionImageText(lpReduction,iCnt)))
+                Close_Output
+            End
+        End
+    Loop
+End_Procedure
+
+Procedure Output_Error String sErr Number iLine Number iCol
+    Date dToday
+    String sTime sHr sMin sSec
+    Sysdate4 dToday sHr sMin sSec
+    If (length(sHr)=1) Move ('0'+sHr) to sHr
+    If (length(sMin)=1) Move ('0'+sMin) to sMin
+    If (length(sSec)=1) Move ('0'+sSec) to sSec
+    Move (String(dToday)+" "+sHr+":"+sMin+":"+sSec) to sTime
+    If (OUTPUT_MODE=OUTPUT_MODE_SCREEN) Begin
+        If ((iLine)or(iCol)) Begin
+             Showln "Error found at line " iLine ", column " iCol 
+             Showln "     [" sErr "]"
+        End
+        Else Showln sErr
+    End
+    If (OUTPUT_MODE=OUTPUT_MODE_FILE) Begin
+        Append_Output OUTPUT_ERRORS_FILE
+        If ((iLine)or(iCol)) Writeln sTime " ERROR: " sErr ", LINE: " iLine ", COL: " iCol 
+        Else                 Writeln sTime " " sErr
+        Close_Output
+    End
+    If (OUTPUT_MODE=OUTPUT_MODE_DEBUGGER) Begin
+        If (not(DEBUGGER_ERROR_OBJECT)) Procedure_return
+        If ((iLine)or(iCol)) Send Add_Error to DEBUGGER_ERROR_OBJECT sErr iLine iCol
+        Else                 Send Add_Error to DEBUGGER_ERROR_OBJECT sErr 0 0
+    End
+End_Procedure
+
+Procedure Output_Token Integer iToken String sSymbol Integer iInd String sImage Integer iLn Integer iCol String sType integer iState
+    If (OUTPUT_MODE=OUTPUT_MODE_SCREEN) Showln "Token [" iToken "]: Symbol <" sSymbol "> Image <" sImage "> " sType
+    If (OUTPUT_MODE=OUTPUT_MODE_FILE) Begin
+        Append_Output OUTPUT_TOKENS_FILE
+        Writeln "Token [" iToken "]: Symbol <" sSymbol "> Image <" sImage "> " sType
+        Close_Output
+    End
+    If (OUTPUT_MODE=OUTPUT_MODE_DEBUGGER) Send Add_Token To DEBUGGER_TOKENS_OBJECT iToken sSymbol sImage iLn iCol sType iInd
+End_Procedure 
+
+Function Errors returns Integer
+    INteger iErr iErrs
+    Move (fErrorsCount()) to iErrs
+    If (iErrs) Send Output_Error ("Found "+String(iErrs)+" errors:") 0 0
+    For iErr from 0 to (iErrs-1)
+        Send Output_Error (wchar_t(fErrorText(iErr))) (fErrorLine(iErr)) (fErrorColumn(iErr))
+    Loop
+    Function_Return iErrs
+End_Procedure
+
+Procedure ParserTest string sGrm string sSrc
+    Integer iErrs iRet 
+    pointer lpSrc lpGrm pVoid
+    String  sSource sGrammar
+    
+    If ((OUTPUT_MODE=OUTPUT_MODE_DEBUGGER)and(DEBUGGER_GRAMMAR_OBJECT)) Begin
+        Send Delete_data To DEBUGGER_GRAMMAR_OBJECT
+        Move (Uppercase(sGrm)) to sGrammar
+        Replace ".CGT" in sGrammar with ".GRM"
+        Set File_Name of DEBUGGER_GRAMMAR_OBJECT To sGrammar
+        Send Read To DEBUGGER_GRAMMAR_OBJECT
+    End
+    If ((OUTPUT_MODE=OUTPUT_MODE_DEBUGGER)and(DEBUGGER_SOURCE_OBJECT)) Begin
+        Send Delete_data To DEBUGGER_SOURCE_OBJECT
+        Set File_Name of DEBUGGER_SOURCE_OBJECT To sSrc
+        Send Read To DEBUGGER_SOURCE_OBJECT
+    End
+    
+    Move sSrc To sSource
+    Move sGrm To sGrammar
+    Append sSrc (character(0))
+    Append sGrm (character(0))
+    GetAddress of sSrc To lpSrc
+    GetAddress of sGrm To lpGrm
+    Move (OemToAnsi(lpSrc,lpSrc)) To pVoid // covert to ANSI first
+    Move (OemToAnsi(lpGrm,lpGrm)) To pVoid // covert to ANSI first
+
+    If (DEBUGGER_OBJECT) Send Delete_data To DEBUGGER_ERROR_OBJECT
+
+    Move (fParserLoadData(lpGrm,lpSrc)) to iRet
+    If (iRet) Begin
+        If (iRet=1) Send Output_Error ("PARSER: 001: Cant load source file ("+sSource+")") 0 0
+        If (iRet=2) Send Output_Error ("PARSER: 002: Cant load compiled grammar table ("+sGrammar+")") 0 0
+        If (iRet=3) Send Output_Error ("PARSER: 003: Compilation failed") 0 0
+        Get Errors To iErrs
+        Procedure_return
+    End
+    
+    // CGT Info
+    Integer iSym iSyms
+    If ((DEBUGGER_OBJECT)and(DEBUGGER_CGT_OBJECT)) Begin
+        Send Delete_Data To DEBUGGER_CGT_OBJECT
+        string sText
+        Integer iCase
+        Move (sText+"Name: "+(wchar_t(fCGTInfoName()))+Character(13)+Character(10)) to sText
+        Move (sText+"Version: "+(wchar_t(fCGTInfoVersion()))+Character(13)+Character(10)) to sText
+        Move (sText+"Author: "+(wchar_t(fCGTInfoAuthor()))+Character(13)+Character(10)) to sText
+        Move (sText+"About: "+(wchar_t(fCGTInfoAbout()))+Character(13)+Character(10)) to sText
+        Move (fCGTIsCaseSensitive()) to iCase
+        If (iCase) Move (sText+"Case Sensitive: True") to sText
+        Else       Move (sText+"Case Sensitive: False") to sText
+        Set Value of DEBUGGER_CGT_OBJECT item 0 to sText
+    End
+    If ((DEBUGGER_OBJECT)and(DEBUGGER_SYMBOLS_OBJECT)) Begin
+        Move (fCGTInfoSymCount()) to iSyms
+        For iSym from 0 to (iSyms-1)
+            Send Add_Symbol To DEBUGGER_SYMBOLS_OBJECT iSym (wchar_t(fCGTInfoSymName(iSym))) (cgtSymbolType(fCGTInfoSymKind(iSym)))
+        Loop
+    End
+    //
+    
+    // Errors
+    Get Errors To iErrs
+
+    // Tokens
+    If (DEBUGGER_OBJECT) Send Delete_data To DEBUGGER_TOKENS_OBJECT
+    Integer iToken iTokens
+    If (not(iRet)) Begin
+        Move (fTokensCount()) to iTokens
+        If (iTokens) Begin
+            For iToken from 0 to (iTokens-1)
+                Send Output_Token iToken (wchar_t(fTokensSymbol(iToken))) (fTokensSymIndex(iToken)) (wchar_t(fTokensImage(iToken))) (fTokensLine(iToken)) (fTokensColumn(iToken)) (cgtSymbolType(fTokensKind(iToken))) (fTokensState(iToken))
+            Loop
+        End
+    End
+
+    If (iErrs) Procedure_Return
+
+    // Reduction tree, if required
+    If (DEBUGGER_OBJECT) Send Delete_Tree To DEBUGGER_TREE_OBJECT
+    Pointer lpReduction
+
+    If ((OUTPUT_MODE=OUTPUT_MODE_SCREEN)or(OUTPUT_MODE=OUTPUT_MODE_FILE)) Begin
+        Move (fRootReduction()) to lpReduction
+        Send ProcessReduction lpReduction 0
+    End
+
+End_Procedure
+
+// Loads grammar file and returns code of error
+Function LoadGrammar string sGrm returns integer
+    INteger iRet iErrs
+    pointer lpGrm pVoid
+    String  sGrammar
+    
+    Move sGrm To sGrammar
+    Append sGrm (character(0))
+    GetAddress of sGrm To lpGrm
+    Move (OemToAnsi(lpGrm,lpGrm)) To pVoid // covert to ANSI first
+
+    Move (fParserLoadGrammarFile(lpGrm)) to iRet
+    If (iRet) Begin
+        If (iRet=2) Send Output_Error ("PARSER: 002: Cant load compiled grammar table ("+sGrammar+")") 0 0
+        function_return 2
+    End
+    function_return 0
+End_Procedure
+
+Function LoadSource string sSrc returns integer
+    INteger iRet iErrs
+    pointer lpSrc pVoid
+    String  sSource
+    
+    Move sSrc To sSource
+    Append sSrc (character(0))
+    GetAddress of sSrc To lpSrc
+    Move (OemToAnsi(lpSrc,lpSrc)) To pVoid // covert to ANSI first
+
+    Move (fParserLoadSourceString(lpSrc)) to iRet
+    If (iRet) Begin
+        If (iRet=1) Error 700 ("PARSER: 001: Source string not loaded")
+        Function_Return 1
+    End
+    Move (fParserProcessLoadedData()) To iRet
+    If (iRet) Begin
+        If (iRet=1) Error 700 ("PARSER: 001: Source string not loaded")
+        If (iRet=2) Error 700 ("PARSER: 002: Cant load compiled grammar table")
+        If (iRet=3) Error 700 ("PARSER: 003: Compilation failed")
+        Function_Return iRet
+    End
+    Function_Return 0
+End_Function
+
+Procedure ParserStringTest string sGrm string sSrc
+    INteger iRet iErrs
+    pointer lpSrc lpGrm pVoid
+    String  sSource sGrammar
+    
+    If ((OUTPUT_MODE=OUTPUT_MODE_DEBUGGER)and(DEBUGGER_GRAMMAR_OBJECT)) Begin
+        Send Delete_data To DEBUGGER_GRAMMAR_OBJECT
+        Move (Uppercase(sGrm)) to sGrammar
+        Replace ".CGT" in sGrammar with ".GRM"
+        Set File_Name of DEBUGGER_GRAMMAR_OBJECT To sGrammar
+        Send Read To DEBUGGER_GRAMMAR_OBJECT
+    End
+    If ((OUTPUT_MODE=OUTPUT_MODE_DEBUGGER)and(DEBUGGER_SOURCE_OBJECT)) Begin
+        Send Delete_data To DEBUGGER_SOURCE_OBJECT
+        Set Value of DEBUGGER_SOURCE_OBJECT item 0 To sSrc
+    End
+    
+    Move sSrc To sSource
+    Move sGrm To sGrammar
+    Append sSrc (character(0))
+    Append sGrm (character(0))
+    GetAddress of sSrc To lpSrc
+    GetAddress of sGrm To lpGrm
+    Move (OemToAnsi(lpSrc,lpSrc)) To pVoid // covert to ANSI first
+    Move (OemToAnsi(lpGrm,lpGrm)) To pVoid // covert to ANSI first
+
+    If (DEBUGGER_OBJECT) Send Delete_data To DEBUGGER_ERROR_OBJECT
+        
+    Move (fParserLoadGrammarFile(lpGrm)) to iRet
+    If (iRet) Begin
+        If (iRet=2) Send Output_Error ("PARSER: 002: Cant load compiled grammar table ("+sGrammar+")") 0 0
+        Procedure_return
+    End
+    Move (fParserLoadSourceString(lpSrc)) to iRet
+    If (iRet) Begin
+        If (iRet=1) Send Output_Error ("PARSER: 001: Source string not loaded") 0 0
+        Procedure_return
+    End
+    Move (fParserProcessLoadedData()) To iRet
+    If (iRet) Begin
+        If (iRet=1) Send Output_Error ("PARSER: 001: Source string not loaded") 0 0
+        If (iRet=2) Send Output_Error ("PARSER: 002: Cant load compiled grammar table ("+sGrammar+")") 0 0
+        If (iRet=3) Send Output_Error ("PARSER: 003: Compilation failed") 0 0
+        Get Errors To iErrs
+        Procedure_return
+    End
+
+    // CGT Info
+    Integer iSym iSyms
+    If ((DEBUGGER_OBJECT)and(DEBUGGER_CGT_OBJECT)) Begin
+        Send Delete_Data To DEBUGGER_CGT_OBJECT
+        string sText
+        Integer iCase
+        Move (sText+"Name: "+(wchar_t(fCGTInfoName()))+Character(13)+Character(10)) to sText
+        Move (sText+"Version: "+(wchar_t(fCGTInfoVersion()))+Character(13)+Character(10)) to sText
+        Move (sText+"Author: "+(wchar_t(fCGTInfoAuthor()))+Character(13)+Character(10)) to sText
+        Move (sText+"About: "+(wchar_t(fCGTInfoAbout()))+Character(13)+Character(10)) to sText
+        Move (fCGTIsCaseSensitive()) to iCase
+        If (iCase) Move (sText+"Case Sensitive: True") to sText
+        Else       Move (sText+"Case Sensitive: False") to sText
+        Set Value of DEBUGGER_CGT_OBJECT item 0 to sText
+    End
+    If ((DEBUGGER_OBJECT)and(DEBUGGER_SYMBOLS_OBJECT)) Begin
+        Move (fCGTInfoSymCount()) to iSyms
+        For iSym from 0 to (iSyms-1)
+            Send Add_Symbol To DEBUGGER_SYMBOLS_OBJECT iSym (wchar_t(fCGTInfoSymName(iSym))) (cgtSymbolType(fCGTInfoSymKind(iSym)))
+        Loop
+    End
+    //
+    
+    // Errors
+    Get Errors To iErrs
+
+    // Tokens
+
+    If (DEBUGGER_OBJECT) Send Delete_data To DEBUGGER_TOKENS_OBJECT
+
+    Integer iToken iTokens
+    If (not(iRet)) Begin
+        Move (fTokensCount()) to iTokens
+        If (iTokens) Begin
+            For iToken from 0 to (iTokens-1)
+                Send Output_Token iToken (wchar_t(fTokensSymbol(iToken))) (fTokensSymIndex(iToken)) (wchar_t(fTokensImage(iToken))) (fTokensLine(iToken)) (fTokensColumn(iToken)) (cgtSymbolType(fTokensKind(iToken))) (fTokensState(iToken))
+            Loop
+        End
+    End
+
+    If (iErrs) Procedure_Return
+    // Reduction tree, if required
+
+    If (DEBUGGER_OBJECT) Send Delete_Tree To DEBUGGER_TREE_OBJECT
+    Pointer lpReduction
+
+    If ((OUTPUT_MODE=OUTPUT_MODE_SCREEN)or(OUTPUT_MODE=OUTPUT_MODE_FILE)) Begin
+        Move (fRootReduction()) to lpReduction
+        Send ProcessReduction lpReduction 0
+    End
+
+End_Procedure
+
+// **************************************
+// ******       PARSER CALLS       ******
+// **************************************
+
+// A. PARSING THE FILES
+
+//Send ParserTest "e:\projects\pasha\data\gscript.cgt" "e:\projects\pasha\data\test1.gs"
+//Send ParserTest "e:\projects\parser\data\sql.cgt" "e:\projects\parser\data\test2.sql"
+//Send ParserTest "e:\projects\parser\data\crystal.cgt" "e:\projects\parser\data\test3.crf"
+//Send ParserTest "e:\projects\parser\data\dataflex.cgt" "e:\projects\parser\data\test4.src"
+
+// B. PARSING THE STRING
+
+//Send ParserStringTest "e:\projects\parser\data\sql.cgt" "SELECT FNAME, LNAME, BD FROM CUSTOMER WHERE CUSTOMER.FNAME LIKE 'SERGEY' AND CUSTOMER.LNAME LIKE 'NATAROV' GROUP BY CUSTOMER.FNAME ORDER BY CUSTOMER.BALANCE"
+
+
+If (OUTPUT_MODE=OUTPUT_MODE_DEBUGGER) Send mActivateDebugger

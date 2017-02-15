@@ -1,0 +1,26 @@
+// True Color Image List
+//
+// This package enhance standard VDF Image list class to allow
+// use more colored icons in.
+//
+// Author: Sergey V. Natarov
+
+Class cWinImageList Is a cImageList
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Property Integer piImageListType public ILC_COLORDDB
+    End_Procedure
+    Procedure DoCreate
+       Integer cx cy dwFlags icInitial iGrowBy iColor
+
+       Get piImageHeight To cy
+       Get piImageWidth  To cx
+       Get piMaxImages   To iGrowBy
+       Get piImageListType To iColor
+
+       Move (iColor+ILC_MASK) To dwFlags
+
+       Set phImageList To (ImageList_Create(cx, cy, dwFlags, 0, iGrowBy))
+    End_Procedure
+End_Class
+

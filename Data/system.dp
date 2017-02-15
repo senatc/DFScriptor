@@ -1,0 +1,13 @@
+// System DataFlex Scriptor Package
+// This file defines set of the predefined constants to simplify script source
+//
+
+// Notes:
+// Not implemented directives:
+// Compiler: #IF|#IFDEF|#IFNDEF|#ELSE|#ENDIF|#REPLACE
+// Enumeration lists: Enum_List/End_Enum_List 
+
+Define DFS_SYSTEM
+
+Use SysAttr.dp
+Use SysWs.dp

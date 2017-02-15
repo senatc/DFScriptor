@@ -1,0 +1,88 @@
+// Sample DF Script (Attributes)
+// (C) 2017, Just for Fun, by Sergey V. Natarov
+// This sample demonstrates usage of the DataFlex attributes
+// in the DataFlex Scriptor
+//
+
+
+// ****************************
+// ***  General Attributes  ***
+// ****************************
+Integer iDriver iNumDrivers
+String  sCurrentDriver sName sDriver
+Get_Attribute DF_NUMBER_DRIVERS To iNumDrivers
+Showln "Available Drivers:"
+Showln "----------------------------------------------"
+For iDriver From 1 To iNumDrivers
+    Get_Attribute DF_DRIVER_NAME Of iDriver To sCurrentDriver
+    Showln "Driver " iDriver ": " sCurrentDriver
+Loop
+
+String sFileListName
+Integer iMaxSlots
+Get_Attribute DF_FILELIST_NAME To sFileListName
+Get_Attribute DF_NUMBER_FILES_SUPPORTED To iMaxSlots
+Showln
+Showln "File List:" 
+Showln "----------------------------------------------"
+Showln sFileListName " (Max. " iMaxSlots " slots)"
+
+
+// **************************
+// ***  Table Attributes  ***
+// **************************
+Handle hTable
+Integer iNumColumns iLastIndex iNumSegments
+Integer iColumn iType iLength iPrecision iIndex iSegment
+String sRoot sDisplay sTable sColumn sType sLength
+Open Customer
+Move Customer.File_Number To hTable
+Showln
+Showln "Customer [" Customer.File_Number "]:"
+Showln "----------------------------------------------"
+// Names
+Get_Attribute DF_FILE_ROOT_NAME     Of hTable To sRoot
+Get_Attribute DF_FILE_DISPLAY_NAME  Of hTable To sDisplay
+Get_Attribute DF_FILE_LOGICAL_NAME  Of hTable To sTable
+Get_Attribute DF_FILE_DRIVER        Of hTable To sDriver
+Showln "Root="      sRoot
+Showln "Display="   sDisplay
+Showln "Logical="   sTable
+Showln "Driver="    sDriver
+// Fields
+Get_Attribute DF_FILE_NUMBER_FIELDS Of hTable To iNumColumns
+Showln
+Showln "Total " iNumColumns " fields defined:"
+For iColumn From 1 To iNumColumns
+    Get_Attribute DF_FIELD_NAME Of hTable iColumn To sColumn
+    Get_Attribute DF_FIELD_TYPE Of hTable iColumn To iType
+    If      (iType = DF_ASCII)   Move "ASC" To sType
+    Else If (iType = DF_BCD)     Move "NUM" To sType
+    Else If (iType = DF_DATE)    Move "DAT" To sType
+    Else If (iType = DF_OVERLAP) Move "OVL" To sType
+    Else If (iType = DF_TEXT)    Move "TXT" To sType
+    Else If (iType = DF_BINARY)  Move "BIN" To sType
+    Get_Attribute DF_FIELD_LENGTH    Of hTable iColumn To iLength
+    Move iLength To sLength
+    Get_Attribute DF_FIELD_PRECISION Of hTable iColumn To iPrecision
+    If (iPrecision) Begin
+        Move (iLength-iPrecision) To iLength
+        Move (String(iLength)+"."+String(iPrecision)) To sLength
+    End
+    Showln (Right(" " + String(iColumn), 2)) ": " sColumn " " sType " " sLength
+Loop // Columns
+// Indexes
+Get_Attribute DF_FILE_LAST_INDEX_NUMBER Of hTable To iLastIndex
+Showln
+Showln "Total " iLastIndex " Indexes defined:"
+For iIndex From 1 To iLastIndex
+    Get_Attribute DF_INDEX_NUMBER_SEGMENTS Of hTable iIndex To iNumSegments
+    Show ("Index "+Right(" " + String(iIndex), 2)) ": "
+    For iSegment From 1 To iNumSegments
+        Get_Attribute DF_INDEX_SEGMENT_FIELD Of hTable iIndex iSegment To iColumn
+        Get_Attribute DF_FIELD_NAME Of hTable iColumn To sColumn
+        Show sColumn ", "
+    Loop // Segments
+    Showln
+Loop // Indexes
+

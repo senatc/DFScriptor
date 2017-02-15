@@ -1,0 +1,1077 @@
+// dfsConsole.pkg
+// by Sergey V. Natarov (senatc@postman.ru)
+// Created on 12/01/2017
+//
+Use WinSuggestion.pkg
+
+Define DFS_CONSOLE_CMD_COLOR for 2915573
+Enum_List
+    Define DFSCS_NORMAL      // 0
+    Define DFSCS_BOLD        // 1
+    Define DFSCS_ITALICS     // 2
+    Define DFSCS_BOLDITALICS // 3
+End_Enum_List
+
+Class cConsoleDisplay is a cRichEdit
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set Size            to 364 575
+        Set Location        to 1 3
+        Set Border_Style    to Border_None
+        Set Color           to clBlack
+        Set peAnchors       to anAll
+        Set piFontSize      to (10*20)
+        Set TextColor       to clWhite
+    End_Procedure
+    Procedure Show_Command String sCommand
+        Integer iTxtColor
+        Get TextColor       to iTxtColor
+        Set TextColor       to DFS_CONSOLE_CMD_COLOR
+        Set pbBold          to True
+        Send AppendTextLn      sCommand
+        Set pbBold          to False
+        Set TextColor       to iTxtColor
+    End_Procedure
+    Procedure Show_Title String sTitle
+        Set pbBold          to True
+        Send AppendTextLn   sTitle
+        Set pbBold          to False
+    End_Procedure
+    Procedure Show_Text Integer iStyle String sText
+        Set pbBold          to ((iStyle=DFSCS_BOLD)or(iStyle=DFSCS_BOLDITALICS))
+        Set pbItalics       to ((iStyle=DFSCS_ITALICS)or(iStyle=DFSCS_BOLDITALICS))
+        Send AppendTextLn      sText
+        Set pbBold          to False
+        Set pbItalics       to False
+    End_Procedure
+    Procedure Show_BlankLine
+        Send AppendTextLn      ""
+    End_Procedure
+    Procedure Show_Error String sError
+        Integer iTxtColor
+        Get TextColor       to iTxtColor
+        Set TextColor       to clRed
+        Set pbBold          to True
+        Send AppendTextLn      sError
+        Set pbBold          to False
+        Set TextColor       to iTxtColor
+    End_Procedure
+End_Class
+
+Class cCommandLineLabel is a TextBox
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set Size to 10 40
+        Set Location to 372 5
+        Set Label to "DFS>"
+        Set peAnchors to anBottomLeft
+        Set Color to clBlack
+        Set TextColor to DFS_CONSOLE_CMD_COLOR
+        Set FontWeight to fw_Bold
+    End_Procedure
+End_Class
+
+Class cConsoleSeparator is a LineControl
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set Size to 2 575
+        Set Location to 365 2
+        Set Bottom_Line_Color to 2915573
+        Set Line_Style to lnBump
+        Set peAnchors to anBottomLeftRight
+    End_Procedure
+End_Class
+
+Class cConsoleCommandLine is a Form
+    Import_Class_Protocol cSuggestionControl_mixin
+    Import_Class_Protocol cSuggestion_mixin
+    
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Send Define_cSuggestionControl_mixin
+        Send Define_cSuggestion_mixin    
+        Property String[] psConsoleCommands
+        Property Integer  piAllowSuggestions
+        Set Size to 13 548
+        Set Location to 370 25
+        Set Form_Border to Border_None
+        Set Color to clBlack
+        Set TextColor to clWhite
+        Set peAnchors to anBottomLeftRight
+        Set piStartAtChar to 1
+        Set peSuggestionMode to smCustom
+        On_Key Key_Enter Send mOnEnter
+        On_Key Key_Ctrl+Key_E Send mOnHistory
+    End_Procedure
+    Procedure mOnEnter
+        String sCommand
+        Send SelectSuggestion
+        Get Value   to sCommand
+        Send OnCommand sCommand
+        Set Value   to ""
+    End_Procedure
+    Procedure mOnHistory
+        String sHistory
+        Get ConsoleHistory to sHistory
+        Set Value item 0 to sHistory
+    End_Procedure
+    Function ShouldSuggestion String sValue Boolean bChanged Returns Boolean
+        Integer iStartAtChar
+        If (piAllowSuggestions(Self)=0) Function_Return False
+        Get piStartAtChar to iStartAtChar
+        Function_Return (bChanged and Length(sValue)>=iStartAtChar)
+    End_Function
+    Procedure Activating
+        String[] saCmd
+        Forward Send Activating
+        Move "$CLEAR"           to saCmd[0]
+        Move "$CLEAR ALL"       to saCmd[1]
+        Move "$CLEAR ERRORS"    to saCmd[1]
+        Move "$CLEAR SCRIPT"    to saCmd[2]
+        Move "HELP"             to saCmd[3]
+        Move "HELP $LIST"       to saCmd[4]
+        Move "HELP $CLEAR"      to saCmd[5]
+        Move "HELP $SHOW"       to saCmd[6]
+        Move "$LIST CHARSETS"   to saCmd[7]
+        Move "$LIST SYMBOLS"    to saCmd[8]
+        Move "$LIST TOKENS"     to saCmd[9]
+        Move "$LIST VARIABLES"  to saCmd[10]
+        Move "$LIST SCOPES"     to saCmd[11]
+        Move "$NOW"             to saCmd[12]
+        Move "$SHOW CHARSET"    to saCmd[13]
+        Move "$SHOW CHARSET ALL" to saCmd[13]
+        Move "$SHOW SYMBOL"     to saCmd[14]
+        Move "$SHOW TOKEN"      to saCmd[15]
+        Move "$SHOW VARIABLE"   to saCmd[16]
+        Move "$SHOW SCOPE 0"    to saCmd[17]
+        Move "$SHOW VERSION"    to saCmd[18]
+        Move "$SHOW DATAFLEX"   to saCmd[19]
+        Move "$SHOW COPYRIGHT"  to saCmd[20]
+        Move "$SHOW DEVELOPER"  to saCmd[21]
+        Move "$SHOW SCRIPT"     to saCmd[22]
+        Move "$SHOW DATE"       to saCmd[23]
+        Move "$SHOW TIME"       to saCmd[24]
+        Move "$SHOW USER"       to saCmd[25]
+        Move "$SHOW COMPUTER"   to saCmd[26]
+        Move "$SHOW COUNTRY"    to saCmd[27]
+        Move "$SHOW LANGUAGE"   to saCmd[28]
+        Move "$SHOW PAGE"       to saCmd[29]
+        Move "$SHOW WORKSPACE"  to saCmd[30]
+        Move "$SHOW BUY"        to saCmd[31]
+        Move "$SAVE"            to saCmd[32]
+        Move "$SAVE CONSOLE"    to saCmd[33]
+        Move "$SAVE SCRIPT"     to saCmd[34]
+        Move "$SAVE TABLES"     to saCmd[35]
+        Move "$CLEAR HISTORY"   to saCmd[36]
+        Move "$SHOW HISTORY"    to saCmd[37]
+        Move "HELP $OPEN"       to saCmd[38]
+        Move "$OPEN"            to saCmd[39]
+        Move "$BUILD"           to saCmd[41]
+        Move "$LIST ERRORS"     to saCmd[42]
+        Move "$DIR"             to saCmd[43]
+        Move "$CD"              to saCmd[44]
+        Move "$COPY"            to saCmd[45]
+        Move "$MOVE"            to saCmd[46]
+        Move "$MD"              to saCmd[47]
+        Set psConsoleCommands   to (SortArray(saCmd,Desktop,RefFunc(DFSTRICMP)))
+    End_Procedure
+    
+    Procedure OnFindSuggestions String sSearch tSuggestion[] ByRef aSuggestions
+        String[] saCmd
+        Integer iLength iCommand iCommands iCount
+        Move (Uppercase(sSearch))   to sSearch
+        Move (Length(sSearch))      to iLength
+        Get psConsoleCommands       to saCmd
+        Move (SizeOfArray(saCmd)-1) to iCommands
+        For iCommand from 0         to iCommands
+            If (sSearch = Left(saCmd[iCommand], iLength) ) Begin
+                Move saCmd[iCommand] to aSuggestions[iCount].sRowId
+                Move saCmd[iCommand] to aSuggestions[iCount].aValues[0]
+                Increment iCount
+            End
+        Loop
+    End_Procedure
+
+    Procedure OnSelectSuggestion String sSearch tSuggestion Suggestion
+        Move (Uppercase(Value(Self, 0))) to sSearch
+        If ("$H" contains Left(sSearch, 1)) ;
+            Set Value to Suggestion.sRowId
+    End_Procedure
+End_Class
+
+Class cConsoleOpen is a OpenDialog
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set Dialog_Caption to 'Open Console File...'
+        Set Filter_String to 'DataFlex Console History|*.dh|DataFlex Script Source|*.ds|DataFlex Script Console|*.rtf|All Files|*.*'
+        Set Initial_Folder to 'C:\'
+    End_Procedure
+
+    Procedure DoCallOpenDialog
+        Boolean bOk
+        Handle hoWorkspace
+        String sDataPath sFileTitle sFileName
+        Get phoWorkspace of oApplication to hoWorkspace
+        Get psDataPath of hoWorkspace to sDataPath
+        Set Initial_Folder to sDataPath
+        Get Show_Dialog to bOk
+        If (bOk) Begin
+            Get File_Title to sFileTitle
+            Get File_Name  to sFileName
+            Send mOnConsoleOpenFile sFileTitle sFileName
+        End
+    End_Procedure
+End_Class
+
+
+Class cConsoleTerminal is a Container3d
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Property String[] psaScript
+        Property String[] psaHistory
+        Property Integer  piHistoryItem 0
+        Set Size to 390 581
+        Set Location to 0 0
+        Set Border_Style to Border_StaticEdge
+        Set Color to clBlack
+        Set peAnchors to anAll
+        Object oConsoleDFScriptor is a cDFScriptor
+        End_Object
+        Object oConsoleCommandLine is a cConsoleCommandLine
+        End_Object
+        Object oConsoleDisplay is a cConsoleDisplay
+        End_Object
+        Object oConsoleSeparator is a cConsoleSeparator
+        End_Object
+        Object oCommandLineLabel is a cCommandLineLabel
+        End_Object
+        Object oConsoleOpen is a cConsoleOpen
+        End_Object
+    End_Procedure
+    Procedure Delete_Data
+        String[] lsaDummy
+        // Reset script
+        Set psaScript       to lsaDummy
+        Set psaHistory      to lsaDummy
+        Set piHistoryItem   to 0
+        // Clear display
+        Send Delete_Data    to oConsoleDisplay
+    End_Procedure
+    Procedure Show_Title String sTitle
+        Send Show_Title to oConsoleDisplay sTitle
+    End_Procedure
+    Procedure Show_Text Integer iStyle String sText
+        Send Show_Text to oConsoleDisplay iStyle sText
+    End_Procedure
+    Procedure Show_BlankLine
+        Send Show_BlankLine to oConsoleDisplay
+    End_Procedure
+    Procedure Show_Error String sError
+        Send Show_Error to oConsoleDisplay sError
+    End_Procedure
+    Function ConsoleHistory Returns String
+        String[] lsaHistory
+        Integer iItem iSize
+        Get psaHistory to lsaHistory
+        If (SizeOfArray(lsaHistory)=0) Function_Return ""
+        Get piHistoryItem to iItem
+        If (iItem>=(SizeOfArray(lsaHistory))) Move 0 to iItem
+        Set piHistoryItem to (iItem+1)
+        Function_Return lsaHistory[iItem]
+    End_Function
+    Function DoHelp String sCommand Returns Integer
+        Case Begin
+            Case ((sCommand="HELP")or(sCommand="?"))
+                Send Show_Title "DataFlex Scriptor Console help:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_NORMAL "Please enter Scriptor basic commands (like $LIST, $CLEAR, HELP) or DataFlex phrases. DataFlex phrases will be accumulated and formed into the script source."
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_NORMAL "Try also: "
+                Send Show_Text  DFSCS_BOLD   "HELP [$LIST|$CLEAR|$SHOW|$SAVE|$OPEN|$CLOSE|$RUN|$EVAL|$BUILD|$SET|$DIR|$CD|$MD|$COPY|$MOVE]"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $RUN")
+                Send Show_Title                 "Command $RUN:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$RUN"
+                Send Show_Text  DFSCS_NORMAL    "      Executes current console DataFlex Script"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $MOVE")
+                Send Show_Title                 "Command $MOVE:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$MOVE [Source] [Destination]"
+                Send Show_Text  DFSCS_NORMAL    "      Moves specified file from the source to the destination"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $COPY")
+                Send Show_Title                 "Command $COPY:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$COPY [Source] [Destination]"
+                Send Show_Text  DFSCS_NORMAL    "      Copies specified file from the source to the destination"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $CD")
+                Send Show_Title                 "Command $CD:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$CD [Drive:][Path]"
+                Send Show_Text  DFSCS_NORMAL    "      Changes current directory to the specified one or changes the current drive"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $MD")
+                Send Show_Title                 "Command $MD:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$MD [Directory]"
+                Send Show_Text  DFSCS_NORMAL    "      Create new specified directory (folder)"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $DIR")
+                Send Show_Title                 "Command $DIR:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$DIR [OptionalMask]"
+                Send Show_Text  DFSCS_NORMAL    "      Lists current directory content. If mask is specified, then list of appropriate files shown"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $SAVE")
+                Send Show_Title                 "Command $SAVE:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$SAVE [OptionalFileNameNoExt]"
+                Send Show_Text  DFSCS_NORMAL    "      Saves console screen into the .RTF file and script into the .DS file on the disk drive"
+                Send Show_Text  DFSCS_ITALICS   "$SAVE CONSOLE [OptionalFileName.dc]"
+                Send Show_Text  DFSCS_NORMAL    "      Saves console screen into the file on the disk drive"
+                Send Show_Text  DFSCS_ITALICS   "$SAVE SCRIPT [OptionalFileName.ds]"
+                Send Show_Text  DFSCS_NORMAL    "      Saves console screen into the file on the disk drive"
+                Send Show_Text  DFSCS_ITALICS   "$SAVE HISTORY [OptionalFileName.dh]"
+                Send Show_Text  DFSCS_NORMAL    "      Saves console commands history into the file on the disk drive"
+                Send Show_Text  DFSCS_ITALICS   "$SAVE TABLES [OptionalFileName.tbl]"
+                Send Show_Text  DFSCS_NORMAL    "      Saves SataFlex Scriptor Tables (if any)"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $OPEN")
+                Send Show_Title                 "Command $OPEN:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$OPEN"
+                Send Show_Text  DFSCS_NORMAL    "      Opens selected file"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $SET")
+                Send Show_Title                 "Command $SET:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$SET [AUTO=ON|AUTO=OFF]"
+                Send Show_Text  DFSCS_NORMAL    "      Toggles between console command auto-suggestions ON and OFF (OFF by default)"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $BUILD")
+                Send Show_Title                 "Command $BUILD:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$BUILD"
+                Send Show_Text  DFSCS_NORMAL    "      Builds cuurently loaded script"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $LIST")
+                Send Show_Title                 "Command $LIST:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$LIST CHARSETS"
+                Send Show_Text  DFSCS_NORMAL    "      Prints table of charsets used (Syn. $LC)"
+                Send Show_Text  DFSCS_ITALICS   "$LIST SYMBOLS"
+                Send Show_Text  DFSCS_NORMAL    "      Prints table of symbols used (Syn. $LY)"
+                Send Show_Text  DFSCS_ITALICS   "$LIST TOKENS"
+                Send Show_Text  DFSCS_NORMAL    "      Prints table of script tokens (Syn. $LT)"
+                Send Show_Text  DFSCS_ITALICS   "$LIST VARIABLES"
+                Send Show_Text  DFSCS_NORMAL    "      Prints table of script variables (Syn. $LV)"
+                Send Show_Text  DFSCS_ITALICS   "$LIST SCOPES"
+                Send Show_Text  DFSCS_NORMAL    "      Prints table of script scopes (Syn. $LS)"
+                Send Show_Text  DFSCS_ITALICS   "$LIST ERRORS"
+                Send Show_Text  DFSCS_NORMAL    "      Prints table of script errors (Syn. $LE)"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $CLEAR")
+                Send Show_Title                 "Command $CLEAR:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$CLEAR"
+                Send Show_Text  DFSCS_NORMAL    "      Clears script console output"
+                Send Show_Text  DFSCS_ITALICS   "$CLEAR ALL"
+                Send Show_Text  DFSCS_NORMAL    "      Clears current script commands, history and console output"
+                Send Show_Text  DFSCS_ITALICS   "$CLEAR ERRORS"
+                Send Show_Text  DFSCS_NORMAL    "      Clears current script errors"
+                Send Show_Text  DFSCS_ITALICS   "$CLEAR HISTORY"
+                Send Show_Text  DFSCS_NORMAL    "      Clears current console commands history"
+                Send Show_Text  DFSCS_ITALICS   "$CLEAR SCRIPT"
+                Send Show_Text  DFSCS_NORMAL    "      Clears current script commands"
+                Send Show_BlankLine  
+                Function_Return 1
+            Case (sCommand="HELP $SHOW")
+                Send Show_Title                 "Command $SHOW:"
+                Send Show_BlankLine
+                Send Show_Text  DFSCS_ITALICS   "$SHOW SYMBOL [Name]"
+                Send Show_Text  DFSCS_NORMAL    "      Prints symbol by name"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW TOKEN"
+                Send Show_Text  DFSCS_NORMAL    "      Prints script token"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW VARIABLE [Name]"
+                Send Show_Text  DFSCS_NORMAL    "      Prints script variable"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW SCOPE [N]"
+                Send Show_Text  DFSCS_NORMAL    "      Prints script scope N (0 by default)"
+                //
+                Send Show_Text  DFSCS_ITALICS   "$SHOW HISTORY"
+                Send Show_Text  DFSCS_NORMAL    "      Prints current console commands history"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW BUY"
+                Send Show_Text  DFSCS_NORMAL    "      Prints purchase information"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW CHARSET [{Name}|ALL]"
+                Send Show_Text  DFSCS_NORMAL    "      Prints charset by name"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW [VERSION|DATAFLEX|COPYRIGHT|DEVELOPER]"
+                Send Show_Text  DFSCS_NORMAL    "      Prints DataFlex Script version, DataFlex versions or Information about Developer"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW SCRIPT"
+                Send Show_Text  DFSCS_NORMAL    "      Prints script text"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW [DATE|TIME]"
+                Send Show_Text  DFSCS_NORMAL    "      Prints current date or time"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW [USER|COMPUTER|COUNTRY|LANGUAGE|PAGE]"
+                Send Show_Text  DFSCS_NORMAL    "      Prints current Username, Computer name, Country, Language or Code pages used"
+                Send Show_Text  DFSCS_ITALICS   "$SHOW WORKSPACE"
+                Send Show_Text  DFSCS_NORMAL    "      Prints current Worspace information"
+                Send Show_Text  DFSCS_ITALICS   "$NOW"
+                Send Show_Text  DFSCS_NORMAL    "      Prints current date and time"
+                Send Show_BlankLine
+                Function_Return 1
+            Case (sCommand="HELP $EVAL")
+                Send Show_Title                 "Command $EVAL:"
+                Send Show_BlankLine  
+                Send Show_Text  DFSCS_ITALICS   "$EVAL [Expression|Variable|Token]"
+                Send Show_Text  DFSCS_NORMAL    "      Evaluates expression or token (Syn. $E). To evaluate token, please add Respective prefix (GET_|SET_|MSG_ etc)."
+                Send Show_BlankLine  
+                Function_Return 1
+        Case End
+        Function_Return 0
+    End_Procedure
+
+    Function DoCopy String sSource String sDestination Integer bMove Returns Integer
+        Boolean bExists
+        File_Exist sSource bExists
+        If (not(bExists)) Begin
+            Send Show_Error "ERROR: Source file not found"
+            Function_Return -1
+        End
+        CopyFile sSource to sDestination
+        File_Exist sDestination bExists
+        If (not(bExists)) Begin
+            Send Show_Error "ERROR: Can not copy file"
+            Function_Return -1
+        End
+        If ((bMove) and (sDestination<>"")) EraseFile sDestination
+        Function_Return 1
+    End_Function
+    // $copy c:\folder\file.ext c:\dest\file.ext
+    Function DoCopyCommand String sCommand Returns Integer
+        String sSource sDestination sTmp
+        Move (Left(Trim(sCommand), 6))              to sTmp
+        Move (Trim(Replace(sTmp, sCommand, "")))    to sTmp
+        Move (Trim(Left(sTmp, Pos(" ", sTmp))))     to sSource
+        Move (Trim(Replace(sTmp, sSource, "")))     to sDestination
+        Case Begin
+            Case (Left(sCommand, 5)="$COPY")
+                Function_Return (DoCopy(Self, sSource, sDestination, 0))
+            Case (Left(sCommand, 5)="$MOVE")
+                Function_Return (DoCopy(Self, sSource, sDestination, 1))
+        Case End
+        Function_Return 0
+    End_Function
+    
+    Function DoDirCommand String sCommand Returns Integer
+        String sCurrentFolder sMask sTmp
+        Boolean bFolder
+        Move (Left(Trim(sCommand), 4))              to sTmp
+        Move (Trim(Replace(sTmp, sCommand, "")))    to sTmp
+        Move sTmp                                   to sMask
+        //
+        Get_Current_Directory                       to sCurrentFolder
+        Send Show_Title ("Current folder:" * sCurrentFolder)
+        //
+        Direct_Input ("DIR:"+sCurrentFolder+"\"+sMask)
+        While (not(SeqEof))
+            Readln sTmp
+            Move 0 to bFolder
+            If (Left(sTmp, 1)="[") Begin
+                Move 1 to bFolder
+                Move (Left(sTmp, Length(sTmp)-1)) to sTmp
+                Move (Right(sTmp, Length(sTmp)-1)) to sTmp
+            End
+            Send Show_Text  DFSCS_NORMAL (sTmp * If(bFolder, "<DIR>", ""))
+        Loop
+        Close_Input
+        Function_Return 1
+    End_Function
+    
+    Function DoCMDCommand String sCommand Returns Integer
+        String sCurrentFolder sTmp sFolder
+        // No parameters given
+        If ((sCommand="$CD")or(sCommand="$MD")) Begin
+            Get_Current_Directory             to sCurrentFolder
+            Send Show_Title ("Current folder:" * sCurrentFolder)
+            Function_Return 1
+        End
+        // Parameters
+        Move (Trim(Left(Trim(sCommand), 4)))        to sTmp
+        Move (Trim(Replace(sTmp, sCommand, "")))    to sFolder
+        Move sTmp                                   to sCommand
+        // Processing
+        If (sCommand="$CD") Begin
+            // 4358 - Rawfile command error
+            Send ignore_error to error_info_object 4358
+            Set_Directory sFolder
+            If (LastErr=4358) Send Show_Error "$CD ERROR: Folder not found"
+            Send trap_error to error_info_object 4358
+            Get_Current_Directory             to sCurrentFolder
+            Send Show_Title ("Current folder:" * sCurrentFolder)
+        End
+        If (sCommand="$MD") Begin
+            // 4358 - Rawfile command error
+            Send ignore_error to error_info_object 4358
+            Make_Directory sFolder
+            If (LastErr=4358) Send Show_Error "$MD ERROR: Folder can not be created"
+            Else Set_Directory sFolder
+            Send trap_error to error_info_object 4358
+            Get_Current_Directory             to sCurrentFolder
+            Send Show_Title ("Current folder:" * sCurrentFolder)
+        End
+        Function_Return 1
+    End_Function
+
+    Function DoShowCommand String sCommand Returns Integer
+        String sParam
+        Integer iVersion iRevision iBuild
+        Case Begin
+            Case (sCommand="$SHOW")
+                Function_Return (DoHelp(Self, "HELP $SHOW"))
+            Case (sCommand contains "$SHOW CHARSET")
+                Move (Left(sCommand, 13)) to sParam
+                Move (Trim(Replace(sParam, sCommand, ""))) to sParam
+                Send Show_Title ("DataFlex Scriptor"*sParam*"Charset(s)")
+                If ((sParam="STRING")or(sParam="ALL"))    Send Show_Text  DFSCS_NORMAL ("Strings: "+DFS_STRING_SET)
+                If ((sParam="COMMENT")or(sParam="ALL"))   Send Show_Text  DFSCS_NORMAL ("Comments: "+DFS_COMMENT_SET)
+                If ((sParam="DIGITS")or(sParam="ALL"))    Send Show_Text  DFSCS_NORMAL ("Digits: "+DFS_DIGIT_SET)
+                If ((sParam="ID")or(sParam="ALL"))        Begin
+                    Send Show_Text  DFSCS_NORMAL ("ID Head: "+DFS_ID_HEAD)
+                    Send Show_Text  DFSCS_NORMAL ("ID Tail: "+DFS_ID_TAIL)
+                End
+                If ((sParam="REAL")or(sParam="ALL"))      Send Show_Text  DFSCS_NORMAL ("Real: "+DFS_REAL_SET)
+                If ((sParam="OPERATORS")or(sParam="ALL")) Send Show_Text  DFSCS_NORMAL ("Operators: "+DFS_OPERATOR_SET)
+                If ((sParam="SYMBOLS")or(sParam="ALL"))   Send Show_Text  DFSCS_NORMAL ("Symbols: "+DFS_SYMBOLS_SET)
+                If ((sParam="ELEMENTS")or(sParam="ALL")) Begin
+                    Send Show_Text  DFSCS_NORMAL ("Function list: "+DFS_FUNCLIST_SET)
+                    Send Show_Text  DFSCS_NORMAL ("Tag Start/Stop: "+DFS_TAGSTART_SET*DFS_TAGSTOP_SET)
+                    Send Show_Text  DFSCS_NORMAL "End-Of-Line: Character(13), Character(10)"
+                    Send Show_Text  DFSCS_NORMAL "Tab: Character(9)"
+                End
+                Function_Return 1
+            Case (sCommand="$SHOW BUY")
+                Send Show_Text  DFSCS_NORMAL "DataFlex Scriptor is free of charge and created just for fun. Enjoy!"
+                Function_Return 1
+            Case (sCommand="$SHOW COMPUTER")
+                Send Show_Text  DFSCS_NORMAL C_dfsComputerName
+                Function_Return 1
+            Case (sCommand="$SHOW USER")
+                Send Show_Text  DFSCS_NORMAL C_dfsUserName
+                Function_Return 1
+            Case (sCommand="$SHOW PAGE")
+                Send Show_Text  DFSCS_NORMAL ('ANSI='+C_dfsANSIPage*', OEM='+C_dfsCodePage)
+                Function_Return 1
+            Case (sCommand="$SHOW COUNTRY")
+                Send Show_Text  DFSCS_NORMAL (C_dfsEngCountry*'('+C_dfsCountry+')')
+                Function_Return 1
+            Case (sCommand="$SHOW LANGUAGE")
+                Send Show_Text  DFSCS_NORMAL C_dfsEngLanguage
+                Function_Return 1
+            Case (sCommand="$SHOW DATE")
+                Send Show_Text  DFSCS_NORMAL (dfsCurrentDate(Self))
+                Function_Return 1
+            Case (sCommand="$SHOW TIME")
+                Send Show_Text  DFSCS_NORMAL (dfsCurrentTime(Self))
+                Function_Return 1
+            Case (sCommand="$NOW")
+                Send Show_Text  DFSCS_NORMAL (String(dfsCurrentDate(Self))*dfsCurrentTime(Self))
+                Function_Return 1 
+            Case (sCommand="$SHOW VERSION")
+                Send Show_Text  DFSCS_NORMAL DFS_VERSION
+                Function_Return 1
+            Case (sCommand="$SHOW COPYRIGHT")
+                Send Show_Title ("(C)"+String(DateGetYear(CurrentDateTime()))+", Sergey V. Natarov")
+                Function_Return 1
+            Case (sCommand="$SHOW DEVELOPER")
+                Send Show_Title              "Sergey V. Natarov"
+                Send Show_Text  DFSCS_NORMAL "Over 25+ years of experience in DataFlex 2.3b...18.x, including Web development."
+                Send Show_Text  DFSCS_NORMAL "Location: Moscow, Russia"
+                Send Show_Text  DFSCS_NORMAL "E-mail: senatc@postman.ru, senatc@mail.ru"
+                Send Show_Text  DFSCS_NORMAL "Skype: senatc"
+                Send Show_Text  DFSCS_NORMAL "Mobile: +7 903 754-83-54"
+                Function_Return 1
+            Case (sCommand="$SHOW WORKSPACE")
+                Send Show_Title (C_dfsDescription*"Workspace Information")
+                Send Show_Text  DFSCS_NORMAL ("AppHtml Path:"*C_dfsAppHtmlPath)
+                Send Show_Text  DFSCS_NORMAL ("AppSrc Path:"*C_dfsAppSrcPath)
+                Send Show_Text  DFSCS_NORMAL ("Bitmap Path:"*C_dfsBitmapPath)
+                Send Show_Text  DFSCS_NORMAL ("Data Path:"*C_dfsDataPath)
+                Send Show_Text  DFSCS_NORMAL ("DDSrc Path:"*C_dfsDDSrcPath)
+                Send Show_Text  DFSCS_NORMAL ("Help Path:"*C_dfsHelpPath)
+                Send Show_Text  DFSCS_NORMAL ("IDESrc Path:"*C_dfsIDESrcPath)
+                Send Show_Text  DFSCS_NORMAL ("Program Path:"*C_dfsProgramPath)
+                Send Show_Text  DFSCS_NORMAL ("File List:"*C_dfsFileList)
+                Send Show_Text  DFSCS_NORMAL ("Workspace file:"*C_dfsWorkspaceFile)
+                Function_Return 1
+            Case (sCommand="$SHOW DATAFLEX")
+                Send Show_Title "DataFlex Information"
+                Send Show_Text  DFSCS_NORMAL ("Serial No.:"*C_dfsDFSerial*"("+C_dfsDFRegName+')')
+                Version_information iVersion iRevision iBuild
+                Send Show_Text  DFSCS_NORMAL ("Compiler:"*String(C_dfsDFVerion))
+                Send Show_Text  DFSCS_NORMAL ("Runtime:"*String(iVersion)-"."-String(iRevision)-"."-String(iBuild))
+                Send Show_Text  DFSCS_NORMAL ("Packages:"*String(PKG_VERSION)-"."-String(PKG_REVISION)-"."-String(PKG_BUILD))
+                Send Show_Text  DFSCS_NORMAL ("FMAC:"*String(FMAC_VERSION)-"."-String(FMAC_REVISION)-"."-String(FMAC_BUILD))
+                Function_Return 1
+            Case (sCommand="$SHOW SCRIPT")
+                Send DoShowScript
+                Function_Return 1
+            Case (sCommand="$SHOW HISTORY")
+                Send DoShowHistory
+                Function_Return 1
+        Case End
+        Function_Return 0
+    End_Function
+    Function DoClearCommand String sCommand Returns Integer
+        tDFSError[] ltDFSErrors
+        String[] lsaScript
+        Case Begin
+            Case (sCommand="$CLEAR")
+                Send Delete_Data to oConsoleDisplay
+                Function_Return 1
+            Case (sCommand="$CLEAR ALL")
+                Send Delete_Data to oConsoleDisplay
+                Send Delete_Data to oConsoleDFScriptor
+                Set psaScript to lsaScript
+                Set psaHistory to lsaScript
+                Set piHistoryItem to 0
+                Function_Return 1
+            Case (sCommand="$CLEAR HISTORY")
+                Set psaHistory to lsaScript
+                Set piHistoryItem to 0
+                Function_Return 1
+            Case (sCommand="$CLEAR SCRIPT")
+                Send Delete_Data to oConsoleDFScriptor
+                Set psaScript to lsaScript
+                Function_Return 1
+            Case (sCommand="$CLEAR ERRORS")
+                Set ptDFSErrors   of oConsoleDFScriptor to ltDFSErrors
+                Set piErrorsCount of oConsoleDFScriptor to 0
+                Function_Return 1
+        Case End
+        Function_Return 0
+    End_Function
+    Procedure DoListVariables
+        Integer             iVariable iVariables
+        tDFSVariable[]      ltVariables
+        Handle              hDFS
+        Move (oConsoleDFScriptor(Self)) to hDFS
+        Get ptVariables of hDFS to  ltVariables
+        Move (SizeOfArray(ltVariables)) to iVariables
+        Send Show_Title "Script Variables"
+        For iVariable from 0 to (iVariables-1)
+            Send Show_Text  DFSCS_NORMAL ( ;
+                                (Var_Type_String(hDFS, ltVariables[iVariable].iType)) + ;
+                                (fDFSOutDim(hDFS, ltVariables[iVariable].iDimension)) * ;
+                                (ltVariables[iVariable].sName) * ;
+                                ("(L"+String(ltVariables[iVariable].iLine)) * ;
+                                (",C"+String(ltVariables[iVariable].iColumn)+")") * ;
+                                ((Var_Prefix(hDFS, ltVariables[iVariable].iType)+String(iVariable))+(If(ltVariables[iVariable].sValue<>"", "=["+ltVariables[iVariable].sValue+']', ""))) ;
+                                )
+        Loop
+        
+    End_Procedure
+    Procedure DoListTokens
+        Integer iToken  iTokens
+        tDFSToken[]     ltTokens
+        Get ptTokens of oConsoleDFScriptor to ltTokens
+        Move (SizeOfArray(ltTokens))        to iTokens
+        Send Show_Title "Script Tokens"
+        For iToken from 0 to (iTokens-1)
+            Send Show_Text  DFSCS_NORMAL ( ;
+                                    (Right('000'+String(iToken), 4)) * ;
+                                    (Right('S00'+String(ltTokens[iToken].iSymbol), 4)) * ;
+                                    ("(L"+String(ltTokens[iToken].iLine)) * ;
+                                    (",C"+String(ltTokens[iToken].iColumn)+")") * ;
+                                    ltTokens[iToken].sImage ;
+                                    )
+        Loop
+    End_Procedure
+    Procedure DoListScriptErrors
+        Integer iError  iErrors
+        tDFSError[]     ltDFSErrors
+        Get ptDFSErrors of oConsoleDFScriptor to ltDFSErrors
+        Move (SizeOfArray(ltDFSErrors)-1) to iErrors
+        Send Show_Title "Script Errors"
+        For iError from 0 to iErrors
+            Send Show_Error ( ;
+                            "ERROR:" * String(ltDFSErrors[iError].iNumber) * ;
+                            ltDFSErrors[iError].sText * ;
+                            '(L'+String(ltDFSErrors[iError].iLine) + ')' ;
+                            )
+        Loop
+    End_Procedure
+    Function DoListCommand String sCommand Returns Integer
+        Case Begin
+            Case (sCommand="$LIST")
+                Function_Return (DoHelp(Self, "HELP $LIST"))
+            Case ((sCommand="$LIST TOKENS")or(sCommand="$LT"))
+                Send DoListTokens
+                Function_Return 1
+            Case ((sCommand="$LIST VARIABLES")or(sCommand="$LV"))
+                Send DoListVariables
+                Function_Return 1
+            Case ((sCommand="$LIST SCOPES")or(sCommand="$LS"))
+                //Send DoListScopes
+                Function_Return 1
+            Case ((sCommand="$LIST SYMBOLS")or(sCommand="$LY"))
+                //Send DoListSymbols
+                Function_Return 1
+            Case ((sCommand="$LIST ERRORS")or(sCommand="$LE"))
+                Send DoListScriptErrors
+                Function_Return 1
+            Case ((sCommand="$LIST CHARSETS")or(sCommand="$LC"))
+                Send Show_Title "DataFlex Scriptor Charsets"
+                Send Show_Text  DFSCS_NORMAL "ALL"
+                Send Show_Text  DFSCS_NORMAL "STRING"
+                Send Show_Text  DFSCS_NORMAL "COMMENT"
+                Send Show_Text  DFSCS_NORMAL "DIGITS"
+                Send Show_Text  DFSCS_NORMAL "ID"
+                Send Show_Text  DFSCS_NORMAL "REAL"
+                Send Show_Text  DFSCS_NORMAL "OPERATORS"
+                Send Show_Text  DFSCS_NORMAL "SYMBOLS"
+                Send Show_Text  DFSCS_NORMAL "ELEMENTS"
+                Function_Return 1
+        Case End
+        Function_Return 0
+    End_Function
+    Procedure Show_Command String sCommand String sType String sResult
+        Handle  hConsole
+        Integer iTxtColor
+        Move (oConsoleDisplay(Self)) to hConsole
+        Get TextColor of hConsole to iTxtColor
+        Set pbBold    of hConsole to False
+        Set TextColor of hConsole to (RGB(65, 170, 255))
+        Send AppendText of hConsole (sType+" ")
+        Set TextColor of hConsole to clWhite
+        Send AppendText of hConsole sCommand
+        Set TextColor of hConsole to clWhite
+        Send AppendText of hConsole "="
+        Set pbBold    of hConsole to True
+        Send AppendText of hConsole sResult
+        Set pbBold    of hConsole to False
+        Set TextColor of hConsole to iTxtColor
+        Send AppendTextLn of hConsole ""
+    End_Procedure
+    Function DoEvalCommand String sCommand Returns Integer
+        Integer iOK
+        Move (Trim(Replace("$EVAL ", sCommand, ""))) to sCommand
+        Move (Trim(Replace("$E ", sCommand, "")))   to sCommand
+        Get Validate_ID of oConsoleDFScriptor sCommand to iOK
+        If (iOK=1) ;
+            Send Show_Command sCommand "[Exp]" (Eval(sCommand))
+        If (iOK=2) ;
+            Send Show_Command sCommand "[Fun]" (Eval("Get_"+sCommand))
+        If (iOK=3) ;
+            Send Show_Command sCommand "[Set]" (Eval("Set_"+sCommand))
+        If (iOK=4) ;
+            Send Show_Command sCommand "[Msg]" (Eval("Msg_"+sCommand))
+        If (iOK=5) ;
+            Send Show_Command sCommand "[Obj]" (Eval("("+sCommand+"(Self))"))
+        If (iOK=0) Send Show_Error "Symbol/Expression can not be evaluated"
+        Function_Return 1
+    End_Function
+    Procedure DoSaveConsoleCommands String sFileName
+        Integer iLine iLines iChannel
+        String[] lsaHistory
+        If (sFileName="") Move "noname.dh" to sFileName
+        Get psaHistory to lsaHistory
+        Move (SizeOfArray(lsaHistory)) to iLines
+        If (iLines=0) Begin
+            Send Show_Text DFSCS_NORMAL "Console did not receive any commands."
+            Procedure_Return
+        End
+        Get piScriptChannel of oConsoleDFScriptor to iChannel
+        Direct_Output channel iChannel sFileName
+        For iLine from 0 to (iLines-1)
+            Writeln channel iChannel lsaHistory[iLine]
+        Loop
+        Close_Output channel iChannel
+        Send Show_Command "(History)" "[Save]" sFileName
+    End_Procedure
+    Procedure DoSaveScript String sFileName
+        Integer iLine iLines iChannel
+        String[] lsaScript
+        If (sFileName="") Move "noname.ds" to sFileName
+        Get psaScript to lsaScript
+        Move (SizeOfArray(lsaScript)) to iLines
+        If (iLines=0) Begin
+            Send Show_Text DFSCS_NORMAL "Script does not have any lines."
+            Procedure_Return
+        End
+        Get piScriptChannel of oConsoleDFScriptor to iChannel
+        Direct_Output channel iChannel sFileName
+        For iLine from 0 to (iLines-1)
+            Writeln channel iChannel lsaScript[iLine]
+        Loop
+        Close_Output channel iChannel
+        Send Show_Command "(Script)" "[Save]" sFileName
+    End_Procedure
+    Function DoSaveCommand String sCommand Returns Integer
+        Integer iOK iTarget
+        String sTarget sFileName sPath
+        DateTime dtNow
+        Move (Trim(Replace("$SAVE", sCommand, ""))) to sCommand
+        Move (Pos(" ", sCommand)) to iTarget
+        If iTarget Move (Left(sCommand, iTarget)) to sTarget
+        Else If (sCommand="") Move "CONSOLE" to sTarget
+        Else Move sCommand to sTarget
+        Move (Trim(Replace(sTarget, sCommand, ""))) to sFileName
+        Move (Eval(C_dfsDataPath)+"\") to sPath
+        If (sFileName="") Begin
+            Move (CurrentDateTime()) to dtNow
+            Move "script-" to sFileName
+            If (sTarget="COMMANDS") Move "commands-" to sFileName
+            If (sTarget="CONSOLE") Move "console-" to sFileName
+            If (sTarget="TABLES") Move "tables-" to sFileName
+            Move ( ;
+                    sPath + sFileName + ;
+                    String(DateGetYear(dtNow)) + ;
+                    Right('0'+String(DateGetMonth(dtNow)),2) + ;
+                    Right('0'+String(DateGetDay(dtNow)),2) + ;
+                    '-' + ;
+                    Right('0'+String(DateGetHour(dtNow)),2) + ;
+                    Right('0'+String(DateGetMinute(dtNow)),2) + ;
+                    Right('0'+String(DateGetSecond(dtNow)),2) ;
+                 )  to sFileName
+        End
+        Else If (not(sFileName contains ":")) ;
+                    Move (sPath + sFileName) to sFileName
+        //
+        Case Begin
+            Case (sTarget="CONSOLE")
+                Move (sFileName+".rtf") to sFileName
+                Send Write to oConsoleDisplay sFileName
+                Send Show_Command "(Console)" "[Save]" sFileName
+                Function_Return 1
+            Case (sTarget="SCRIPT")
+                Move (sFileName+".ds") to sFileName
+                Send DoSaveScript sFileName
+                Function_Return 1
+            Case (sTarget="HISTORY")
+                Move (sFileName+".dh") to sFileName
+                Send DoSaveConsoleCommands sFileName
+                Function_Return 1
+            Case (sTarget="TABLES")
+                Move (sFileName+".tbl") to sFileName
+                Set psScriptSource of oConsoleDFScriptor to sFileName
+                Send DebuggerInfo  to oConsoleDFScriptor
+                Set psScriptSource of oConsoleDFScriptor to ""
+                Send Show_Command "(Tables)" "[Save]" sFileName
+                Function_Return 1
+        Case End
+        Function_Return 1
+    End_Function
+    Function DoOpenCommand String sCommand Returns Integer
+        Send DoCallOpenDialog to oConsoleOpen
+        Function_Return 1
+    End_Function
+    Function DoRunCommand String sCommand Returns Integer
+        Integer iRetVal
+        String  sScope
+        // If no script, then ask to open
+        If (psScriptSource(oConsoleDFScriptor(Self))="") ;
+            Move (DoOpenCommand(Self, sCommand)) to iRetVal
+        //
+        Send Compile to oConsoleDFScriptor
+        If (piErrorsCount(oConsoleDFScriptor(Self))=0) Begin
+            Send DFS_Exec to oConsoleDFScriptor ""
+        End
+        Function_Return 1
+    End_Function
+    Function DoBuildCommand String sCommand Returns Integer
+        Integer iRetVal
+        // If no script, then ask to open
+        If (psScriptSource(oConsoleDFScriptor(Self))="") ;
+            Move (DoOpenCommand(Self, sCommand)) to iRetVal
+        //
+        Send Compile to oConsoleDFScriptor
+        If (piErrorsCount(oConsoleDFScriptor(Self))=0) Begin
+            Send Save_Executable to oConsoleDFScriptor
+            Send Show_Command "(Console)" "[Build]" (psScriptSource(oConsoleDFScriptor(Self)))
+        End
+        Else Begin
+            Send Show_Error "ERROR: Can not build scrit. Errors occured."
+            Send DoListScriptErrors
+        End
+        Function_Return 1
+    End_Function
+    Function DoConsoleCommand String sCommand Returns Integer
+        Case Begin
+            Case (Left(sCommand, 4)="$RUN")
+                Function_Return (DoRunCommand(Self, sCommand))
+            Case (Left(sCommand, 6)="$BUILD")
+                Function_Return (DoBuildCommand(Self, sCommand))
+            Case (Left(sCommand, 5)="$OPEN")
+                Function_Return (DoOpenCommand(Self, sCommand))
+            Case (Left(sCommand, 6)="$SAVE")
+                Function_Return (DoSaveCommand(Self, sCommand))
+            Case (Left(sCommand, 6)="$CLEAR")
+                Function_Return (DoClearCommand(Self, sCommand))
+            Case (Left(sCommand, 2)="$L")
+                Function_Return (DoListCommand(Self, sCommand))
+            Case (Left(sCommand, 2)="$E")
+                Function_Return (DoEvalCommand(Self, sCommand))
+            Case ((Left(sCommand, 5)="$SHOW")or(sCommand="$NOW"))
+                Function_Return (DoShowCommand(Self, sCommand))
+            Case ((Left(sCommand, 5)="$COPY")or(Left(sCommand, 5)="$MOVE"))
+                Function_Return (DoCopyCommand(Self, sCommand))
+            Case (Left(sCommand, 4)="$DIR")
+                Function_Return (DoDirCommand(Self, sCommand))
+            Case ((Left(sCommand, 3)="$CD")or(Left(sCommand, 3)="$MD"))
+                Function_Return (DoCMDCommand(Self, sCommand))
+        Case End
+        Function_Return 0
+    End_Function
+    Procedure DoShowScript
+        Integer iLine iLines
+        String[] lsaScript
+        Get psaScript to lsaScript
+        Move (SizeOfArray(lsaScript)) to iLines
+        If (iLines=0) Begin
+            Send Show_Text DFSCS_NORMAL "Script does not have any lines."
+            Procedure_Return
+        End
+        For iLine from 1 to iLines
+            Send Show_Text DFSCS_NORMAL (Right(('00'+String(iLine)), 3)+':'*lsaScript[iLine-1])
+        Loop
+    End_Procedure
+    Procedure DoShowHistory
+        Integer iLine iLines
+        String[] lsaHistory
+        Get psaHistory to lsaHistory
+        Move (SizeOfArray(lsaHistory)) to iLines
+        If (iLines=0) Begin
+            Send Show_Text DFSCS_NORMAL "Console did not receive any commands."
+            Procedure_Return
+        End
+        For iLine from 0 to (iLines-1)
+            Send Show_Text DFSCS_NORMAL lsaHistory[iLine]
+        Loop
+    End_Procedure
+    Function DoDataFlexCommand String sCommand Returns Integer
+        Integer iError iLine
+        String[] saScript
+        Get psaScript to saScript
+        Move (SizeOfArray(saScript)) to iLine
+        Set piGeneratePRN of oConsoleDFScriptor to False
+        Send ParseLine    to oConsoleDFScriptor (iLine+1) (sCommand+dfsCRLF) "Console" 0
+        Set piGeneratePRN of oConsoleDFScriptor to True
+        Get piErrorsCount of oConsoleDFScriptor to iError
+        If (iError=0) Begin
+            Move sCommand to saScript[iLine]
+            Set psaScript to saScript
+        End
+        Else Send DoListScriptErrors
+        Function_Return (not(iError))
+    End_Function
+    Procedure mOnConsoleOpenFile String sFileTitle String sFileName
+        String[] lsaData
+        String   sLine
+        Integer  iChannel iLine
+        Get piScriptChannel of oConsoleDFScriptor to iChannel
+        Move (Uppercase(sFileTitle)) to sFileTitle
+        // Load console history file
+        If (sFileTitle contains ".DH") Begin
+            // Clear history data
+            Set psaHistory      to lsaData
+            Set piHistoryItem   to 0
+            // Load
+            Direct_Input channel iChannel sFileName
+            While (not(SeqEof))
+                Readln channel iChannel sLine
+                If (sLine<>"") Begin
+                    Move (Trim(sLine)) to lsaData[iLine]
+                    Increment iLine
+                End
+            Loop
+            Close_Input channel iChannel
+            Set psaHistory to lsaData
+            Send Show_Command "(History)" "[Open]" sFileName
+        End
+        // Load script file
+        If (sFileTitle contains ".DS") Begin
+            // Clear script data
+            Set psaScript       to lsaData
+            Send Delete_Data    to oConsoleDFScriptor
+            // Load
+            Direct_Input channel iChannel sFileName
+            While (not(SeqEof))
+                Readln channel iChannel sLine
+                If (sLine<>"") Begin
+                    Move (Trim(sLine)) to lsaData[iLine]
+                    Increment iLine
+                End
+            Loop
+            Close_Input channel iChannel
+            Set psaScript to lsaData
+            //
+            Set psScriptFile    of oConsoleDFScriptor to sFileTitle
+            Set psScriptSource  of oConsoleDFScriptor to sFileName
+            Send Compile        of oConsoleDFScriptor
+            //
+            Send Show_Command "(Script)" "[Open]" sFileName
+        End
+        // Load script file
+        If (sFileTitle contains ".RTF") Begin
+            Send Read to oConsoleDisplay sFileName
+            Send Show_Command "(Console)" "[Open]" sFileName
+        End
+    End_Procedure
+    Function DoTalkTalk String sCommand Returns Integer
+        Case Begin
+            Case (Left(sCommand, 5)="HELLO")
+                Send Show_Text DFSCS_NORMAL "Hi!"
+                Function_Return 1
+            Case (Left(sCommand, 2)="HI")
+                Send Show_Text DFSCS_NORMAL "Hello!"
+                Function_Return 1
+            Case (sCommand contains "YOUR NAME")
+                Send Show_Text DFSCS_NORMAL "Sergey did not assign any name for me..."
+                Function_Return 1
+            Case (sCommand contains "HOW ARE YOU")
+                Send Show_Text DFSCS_NORMAL "I am fine, thanks!"
+                Function_Return 1
+            Case (sCommand contains "HOW ARE WE GOING" )
+                Send Show_Text DFSCS_NORMAL "We are fine, thanks!"
+                Function_Return 1
+        Case End
+        Function_Return 0
+    End_Function
+    Procedure OnCommand String sCommand
+        Integer iRetVal iHistory
+        String sUCommand
+        String[] lsaHistory
+        // Keep history
+        Get psaHistory to lsaHistory
+        Move (SizeOfArray(lsaHistory)) to iHistory
+        Move sCommand to lsaHistory[iHistory]
+        Set psaHistory to lsaHistory
+        //
+        If (sCommand="") Move "HELP" to sCommand
+        Send Show_Command to oConsoleDisplay sCommand
+        //
+        Move (Uppercase(sCommand)) to sUCommand
+        //
+        Get DoTalkTalk sUCommand to iRetVal
+        If (iRetVal=0) Begin
+            If ( (Left(sUCommand, 4)="HELP") or (sUCommand="?") ) Get DoHelp sUCommand to iRetVal
+            Else If (Left(sUCommand, 1)="$") Get DoConsoleCommand sUCommand to iRetVal
+            Else Get DoDataFlexCommand sCommand to iRetVal
+        End
+        //
+        If (iRetVal=0) Send Show_Error ("ERROR: Command"*sCommand*"is not recognozed.")
+    End_Procedure
+End_Class

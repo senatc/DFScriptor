@@ -1,0 +1,44 @@
+// Sample DF Script (Database)
+// (C) 2017, Just for Fun, by Sergey V. Natarov
+// This sample demonstrates usage of some DataFlex
+// database operations in the DataFlex Scriptor
+//
+
+Integer iRecentOrders
+Date    dOrderDate
+Move (Date("15/12/2012")) To dOrderDate
+//
+Open Customer
+Open OrderHea
+//
+Clear Customer
+Showln "Active Customers as at " dOrderDate
+Showln "---------------------------------------------------------"
+//
+Indicate found True
+While (found)
+    Find Gt Customer by Index.1
+    If (found) Begin
+        Move 0 To iRecentOrders
+        Clear OrderHea
+        Move Customer.Customer_Number To OrderHea.Customer_Number
+        Find Ge OrderHea by Index.2
+        If (found) Indicate found As Customer.Customer_Number Eq OrderHea.Customer_Number
+        While (found)
+            If (OrderHea.Order_Date>=dOrderDate) Begin
+                If (iRecentOrders=0) Begin
+                    Move 1 To iRecentOrders
+                    Showln Customer.Customer_Number " - " Customer.Name
+                    Showln "    Recent Orders:"
+                End
+                Showln "    Order# " OrderHea.Order_Number " on " OrderHea.Order_Date " ($" OrderHea.Order_Total ")"
+            End
+            Find Gt OrderHea by Index.2
+            If (found) Indicate found As Customer.Customer_Number Eq OrderHea.Customer_Number
+        Loop
+        If iRecentOrders Showln
+        Indicate found True
+    End
+Loop
+
+

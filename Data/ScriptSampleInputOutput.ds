@@ -1,0 +1,47 @@
+// Sample DF Script (Input/Output)
+// (C) 2017, Just for Fun, by Sergey V. Natarov
+// This sample demonstrates usage of some DataFlex
+// Input/Output operations in the DataFlex Scriptor
+//
+
+Integer iCount
+String  sLine sCount
+
+// Basic Output commands
+Direct_Output "Basic.txt"
+Writeln "Line 1"
+Writeln "Line 2"
+Writeln "Line 3"
+Close_Output
+Showln "OUT " (dfsFilePath("Basic.txt"))
+
+// Using Channels
+Direct_Output Channel 1 "Ch1.txt"
+Direct_Output Channel 2 "Ch2.txt"
+Writeln Channel 1 "Channel 1 Line"
+Writeln Channel 2 "Channel 2.1 Line"
+Close_Output Channel 1
+Writeln Channel 2 "Channel 2.2 Line"
+Close_Output Channel 2
+Showln "OUT 1 " (dfsFilePath("Ch1.txt"))
+Showln "OUT 2 " (dfsFilePath("Ch2.txt"))
+
+// Basic Input commands
+Direct_Input "Basic.txt"
+Showln "IN " (dfsFilePath("Basic.txt"))
+While (Not(seqeof))
+    Readln sLine
+    If (sLine<>"") Begin 
+        Increment iCount
+        Move (Right("000"+String(iCount), 3)) To sCount
+        Showln sCount ": " sLine
+    End
+Loop
+Close_Input
+
+Direct_Input Channel 3 "Basic.txt"
+Showln "IN " (dfsFilePath("Basic.txt"))
+Read_Block Channel 3 sLine 3
+Close_Input  Channel 3
+Showln "Read Block(3)=" sLine
+

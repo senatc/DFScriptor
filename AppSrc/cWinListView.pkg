@@ -1,0 +1,982 @@
+//************************************************************************
+// cWinListView.pkg   LISTVIEW Package
+//
+// Copyright (c) 1999-2001 Out of the Box Consulting, Inc.
+// All rights reserved.
+//
+//***************************************************************************
+//  Description:
+//      A DataFlex class to support the Windows' ListView class.
+//      This class supports nearly all of the features available in the 
+//      windows cListCtrl class.  Most of the missing features are not
+//      available because they cannot properly be supported from VDF.
+//
+//      NOTE: This class is provided without documentation, beyond what is
+//            documented in this source.
+//
+//  Author: Oliver T. Nelson
+//***************************************************************************
+
+Use cWinListView.h
+Use cWinImageList.pkg
+Use cWinFunc.pkg
+
+#IFNDEF Get_InvalidateRgnEf
+External_Function InvalidateRgnEf "InvalidateRgn" user32.dll Handle hWnd Handle hRgn Boolean bErase Returns Integer
+#ENDIF
+
+Class cNormalImageList Is a cWinImageList
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set piImageHeight To 32
+        Set piImageWidth  To 32
+    End_Procedure
+End_Class
+
+Class cSmallImageList Is a cWinImageList
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Set piImageHeight To 16
+        Set piImageWidth  To 16
+    End_Procedure
+End_Class
+
+Class cBaseListView Is A cWinControl
+    
+    Procedure Construct_Object
+//        Send DoInitCommonControlsEx ICC_LISTVIEW_CLASSES
+
+        Property String  Private.psBackImage   ""
+        Property Integer Private.piBackColor   Public (GetSysColor(COLOR_WINDOW))
+        Property Integer Private.piTextColor   Public (GetSysColor(COLOR_WINDOWTEXT))
+        Property Integer Private.piTextBackColor Public (GetSysColor(COLOR_WINDOW))
+        Property Handle  Private.phNormalIL    Public 0
+        Property Handle  Private.phSmallIL     Public 0
+        Property Handle  Private.phStateIL     Public 0
+        Property Integer Private.piView Public LVS_REPORT //LVS_ICON
+        Property Integer Private.piSort Public 0
+        
+        // ** SVN -- to capture end drag event
+        Property Boolean pbDragItem           Public False
+        Property Integer piDragItem           Public -1
+        Property Boolean pbAllowResizeColumns Public False
+        // Dynamic update state
+        Property Boolean Private.Dynamic_Update_State Public True
+        // ** SVN --
+
+        Property Boolean pbUnderlineColdItems Public False
+        Property Boolean pbUnderlineHotItems  Public True //FALSE
+        Property Boolean pbHoverSelection     Public False
+        Property Boolean pbSupportWorkAreas   Public False
+        Property Boolean pbUseToolTipCallBack Public True //FALSE
+        Property Boolean pbUseFlatScrollBars  Public False
+        Property Boolean pbWrapItemLabels     Public True
+        Property Boolean pbShowScrollBars     Public True
+        Property Boolean pbShowColumnHeader   Public True
+        Property Boolean pbSupportHeaderSort  Public True //FALSE
+        Property Boolean pbSupportSharedILs   Public True //False
+        Property Boolean pbSupportLabelEdit   Public False
+        Property Boolean pbSupportHeaderDnD   Public True //FALSE
+        Property Boolean pbSupportSubImages   Public False
+        Property Boolean pbAutoArrange        Public True //False
+        Property Boolean pbRetainSel          Public True
+        Property Boolean pbSingleSel          Public True //False
+        Property Boolean pbHighLightRow       Public True // False
+        Property Boolean pbCheckBoxes         Public True //False
+        Property Boolean pbGridLines          Public False
+        Property Boolean pbHotTrackOneClick   Public False
+        Property Boolean pbHotTrackTwoClick   Public False
+        Set Border_Style To Border_ClientEdge
+        
+        // 
+        Property Integer Columns_Count        Public 0
+
+        Set External_Class_Name "DFListView" To "SysListView32"
+        Forward Send construct_object
+
+        On_Key kenter Send Private.OnItemEnter
+        
+        Set External_Message WM_MOUSEMOVE   To MSG_OnMouseMove
+        Set External_Message WM_LBUTTONDOWN To MSG_OnLButtonDown
+        Set External_Message WM_LBUTTONUP   To MSG_OnLButtonUpSys
+        Set External_Message WM_RBUTTONDOWN To MSG_OnRButtonDown
+        Set External_Message WM_RBUTTONUP   To MSG_OnRButtonUpSys
+        
+        Send Define_Shadow_Mixin
+        
+    End_Procedure
+    
+    Import_Class_Protocol Shadow_Mixin
+    
+    //===============================EMPTY PROCEDURES/FUNCTIONS===============================
+    //=================================== (Notification) =====================================
+    Procedure Set Dynamic_Update_State Boolean bState
+        Integer iRet
+        Move (SendMessage(Window_Handle(Self), WM_SETREDRAW, bState,0)) To iRet
+        If (iRet=0) Set Private.Dynamic_Update_State To bState
+    End_Procedure
+    Function Dynamic_Update_State Returns Boolean
+        Function_Return (Private.Dynamic_Update_State(Self))
+    End_Function
+    
+    Function OnBeginLabelEdit Integer iItem Returns Integer
+    End_Function
+    //
+    Function OnEndLabelEdit String sLabel Returns Integer
+    End_Function
+    //
+    Procedure OnMouseMove
+    End_Procedure
+    //
+    Procedure OnLButtonDown
+    End_Procedure
+    //
+    Procedure OnLButtonUp
+    End_Procedure
+    //
+    Procedure OnRButtonDown
+    End_Procedure
+    //
+    Procedure OnRButtonUp
+    End_Procedure
+    //
+    Procedure OnItemEnter Integer iItem
+    End_Procedure
+    //
+    Procedure OnItemClick Integer iItem
+    End_Procedure
+    //
+    Procedure OnItemRClick Integer iItem
+    End_Procedure
+    //
+    Procedure OnItemDblClick Integer iItem
+    End_Procedure
+    //
+    Procedure OnItemRDblClick Integer iITem
+    End_Procedure
+    //
+    Procedure OnChange Integer iCode Integer lParam
+    End_Procedure
+    //
+    Procedure OnColumnClick Integer iColumn
+    End_Procedure
+    //
+    Procedure OnBeginDrag Integer iItem
+    End_Procedure
+    //
+    Procedure OnEndDrag Integer iItem
+    End_Procedure
+    //
+    Procedure OnBeginRDrag Integer iItem
+    End_Procedure
+    //
+    Procedure OnEndRDrag Integer iItem
+    End_Procedure
+    //
+    Procedure OnSetFocus
+    End_Procedure
+    //
+    Procedure OnKillFocus
+    End_Procedure
+    //
+    Procedure OnCreate // initialize items
+    End_Procedure
+    //
+    //==================================SYSTEM MESSAGES=======================================
+    //
+    Procedure OnLButtonUpSys
+        Send Release_Mouse_Capture
+        If (pbDragItem(Self)) Begin
+            Send OnEndDrag (piDragItem(Self))
+            Set pbDragItem To False
+            Set piDragItem To -1
+        End
+        Send OnLButtonUp
+        Set Cursor Of (Cursor_Control(Current_Object)) To 0
+    End_Procedure
+    Procedure OnRButtonUpSys
+        Send Release_Mouse_Capture
+        If (pbDragItem(Self)) Begin
+            Send OnEndDrag (piDragItem(Self))
+            Set pbDragItem To False
+            Set piDragItem To -1
+        End
+        Send OnRButtonUp
+    End_Procedure
+    
+    Procedure Notify Integer wParam Integer lParam
+        Integer iVoid iCode iItem iSubItem iTextSize iRetVal
+        Pointer lpsNMLVDISPINFO lpsNM_LISTVIEW lpsNMHDR lpsText lpsNewText
+        String sNMLVDISPINFO sNM_LISTVIEW sNMHDR sPszText
+
+        ZeroType tNMLVDISPINFO To sNMLVDISPINFO
+        GetAddress Of sNMLVDISPINFO To lpsNMLVDISPINFO
+        
+        ZeroType tNM_LISTVIEW To sNM_LISTVIEW
+        GetAddress Of sNM_LISTVIEW To lpsNM_LISTVIEW
+        
+        ZeroType tNMHDR To sNMHDR
+        GetAddress Of sNMHDR To lpsNMHDR
+        
+        Move (CopyMemory(lpsNMHDR, lParam, tNMHDR_size)) To iVoid
+
+        GetBuff From sNMHDR At tNMHDR.code    To iCode
+        
+        Case Begin
+            Case (iCode = LVN_COLUMNCLICK)
+                Move (CopyMemory(lpsNM_LISTVIEW, lParam, tNM_LISTVIEW_size)) To iVoid
+                GetBuff From sNM_LISTVIEW At tNM_LISTVIEW.iSubItem To iSubItem
+                
+                Send OnColumnClick iSubItem
+                Case Break
+            Case (iCode = LVN_BEGINDRAG)
+                Move (CopyMemory(lpsNM_LISTVIEW, lParam, tNM_LISTVIEW_size)) To iVoid
+
+                // ** SVN -- item number expected
+                GetBuff From sNM_LISTVIEW At tNM_LISTVIEW.iItem To iItem
+                Set pbDragItem To True
+                Set piDragItem To iItem
+                Set Cursor Of (Cursor_Control(Current_Object)) To IDC_CROSS
+                Send Set_Mouse_Capture
+                // ** SVN -- End of drag support
+                
+                Send OnBeginDrag iItem  //sNM_LISTVIEW
+                Case Break
+            Case (iCode = LVN_BEGINRDRAG)
+                Move (CopyMemory(lpsNM_LISTVIEW, lParam, tNM_LISTVIEW_size)) To iVoid
+                // ** SVN -- item number expected
+                GetBuff From sNM_LISTVIEW At tNM_LISTVIEW.iItem To iItem
+
+                Send OnBeginRDrag iItem //sNM_LISTVIEW
+                Case Break
+            Case (iCode = LVN_BEGINLABELEDIT)
+                Move (CopyMemory(lpsNMLVDISPINFO, lParam, tNMLVDISPINFO_size)) To iVoid
+                GetBuff From sNMLVDISPINFO At tNMLVDISPINFO.LVITEM.iItem To iItem
+                
+                Get OnBeginLabelEdit iItem To iRetVal
+                Case Break
+            Case (iCode = LVN_ENDLABELEDIT)
+                Move (CopyMemory(lpsNMLVDISPINFO, lParam, tNMLVDISPINFO_size)) To iVoid
+                GetBuff From sNMLVDISPINFO At tNMLVDISPINFO.LVITEM.iItem To iItem
+                GetBuff From sNMLVDISPINFO At tNMLVDISPINFO.LVITEM.pszText To lpsNewText
+                GetBuff From sNMLVDISPINFO At tNMLVDISPINFO.LVITEM.cchTextMax To iTextSize
+        
+                Move (Repeat(Character(0), 512)) To sPszText
+                GetAddress Of sPszText To lpsText
+            
+                Move (CopyMemory(lpsText, lpsNewText, iTextSize)) To iVoid
+                Get OnEndLabelEdit sPszText To iRetVal
+                Case Break
+            Case (iCode = NM_CLICK)
+                Get HitTest To iItem
+                If (iItem <> -1) Send OnItemClick iItem
+                
+                Case Break
+            Case (iCode = NM_DBLCLK)
+                Get HitTest To iItem
+                If (iItem <> -1) Send OnItemDblClick iItem
+                
+                Case Break
+            Case (iCode = NM_RCLICK)
+                Get HitTest To iItem
+                If (iItem <> -1) Send OnItemRClick iItem
+                
+                Case Break
+            Case (iCode = NM_RETURN)
+                Get HitTest To iItem
+                If (iItem <> -1) Send OnItemEnter iItem
+                Case Break
+            Case (iCode = NM_SETFOCUS) // Receiving the focus
+                Send External_SetFocus
+                Case Break
+            Case (iCode = NM_KILLFOCUS) // Losing the focus
+                Send External_KillFocus
+                Case Break
+            Case Else
+                Send OnChange iCode lParam
+        Case End
+
+        Procedure_Return iRetVal
+    End_Procedure
+
+    Procedure Page Integer iState
+        Integer iStyle iSmall iNormal
+
+        Set Window_Style To (Private.piView(Self)) True
+        Set Window_Style To (Private.piSort(Self)) True
+        
+        Set Window_Style To LVS_NOCOLUMNHEADER  (Not(pbShowColumnHeader(Self)))
+        Set Window_Style To LVS_NOLABELWRAP     (Not(pbWrapItemLabels(Self)))
+        Set Window_Style To LVS_NOSCROLL        (Not(pbShowScrollBars(Self)))
+        Set Window_Style To LVS_NOSORTHEADER    (Not(pbSupportHeaderSort(Self)))
+        Set Window_Style To LVS_EDITLABELS      (pbSupportLabelEdit(Self))
+        Set Window_Style To LVS_SHAREIMAGELISTS (pbSupportSharedILs(Self))
+        Set Window_Style To LVS_SHOWSELALWAYS   (pbRetainSel(Self))
+        Set Window_Style To LVS_AUTOARRANGE     (pbAutoArrange(Self))
+        Set Window_Style To LVS_SINGLESEL       (pbSingleSel(Self))
+
+        Forward Send Page iState
+
+        If (iState = 1) Begin
+            Set piBackColor   To (Private.piBackColor(Self))
+            Set piTextColor   To (Private.piTextColor(Self))
+            Set piTextBackColor To (Private.piTextBackColor(Self))
+
+            If (pbUnderlineHotItems(Self))   Move (iStyle + LVS_EX_UNDERLINEHOT)     To iStyle
+            If (pbUnderlineColdItems(Self))  Move (iStyle + LVS_EX_UNDERLINECOLD)    To iStyle
+            If (pbHotTrackOneClick(Self))    Move (iStyle + LVS_EX_ONECLICKACTIVATE) To iStyle
+            If (pbHotTrackTwoClick(Self))    Move (iStyle + LVS_EX_TWOCLICKACTIVATE) To iStyle
+            If (pbSupportWorkAreas(Self))    Move (iStyle + LVS_EX_MULTIWORKAREAS)   To iStyle
+            If (pbUseFlatScrollBars(Self))   Move (iStyle + LVS_EX_FLATSB)           To iStyle
+            If (pbUseToolTipCallBack(Self))  Move (iStyle + LVS_EX_INFOTIP)          To iStyle
+            If (pbSupportHeaderDnD(Self))    Move (iStyle + LVS_EX_HEADERDRAGDROP)   To iStyle
+            If (pbSupportSubImages(Self))    Move (iStyle + LVS_EX_SUBITEMIMAGES)    To iStyle
+            If (pbHighlightRow(Self))        Move (iStyle + LVS_EX_FULLROWSELECT)    To iStyle
+            If (pbCheckBoxes(Self))          Move (iStyle + LVS_EX_CHECKBOXES)       To iStyle
+            If (pbGridLines(Self))           Move (iStyle + LVS_EX_GRIDLINES)        To iStyle
+            If (pbHoverSelection(Self))      Move (iStyle + LVS_EX_TRACKSELECT)      To iStyle
+            If iStyle Begin
+                Send Windows_Message LVM_SETEXTENDEDLISTVIEWSTYLE 0 iStyle
+            End
+
+            Send OnCreate
+
+        End
+    End_Procedure
+    
+    Procedure Private.OnItemEnter
+        Integer iItem
+        
+        Get CurrentItem To iItem
+        Send OnItemEnter iItem
+    End_Procedure
+    
+    
+    //
+    // ============================ Get/Set Functions/Procedures ===============================
+    //
+    Procedure Set CurrentItem Integer iItem
+        Integer iOldItem
+        String sLV
+        Pointer lpsLV
+
+        Get CurrentItem To iOldItem
+        ZeroType tLVITEM To sLV
+
+        Put (0) To sLV At tLVITEM.State
+        Put (LVIS_SELECTED) To sLV At tLVITEM.StateMask
+
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_SETITEMSTATE iOldItem lpsLV
+
+        ZeroType tLVITEM To sLV
+
+        Put (LVIS_FOCUSED + LVIS_SELECTED) To sLV At tLVITEM.State
+        Put (LVIS_FOCUSED + LVIS_SELECTED) To sLV At tLVITEM.StateMask
+
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_SETITEMSTATE iItem lpsLV
+    End_Procedure
+
+    Function CurrentItem Returns Integer
+        Integer iTotal iCnt iRetVal
+        
+        Get ItemCount To iTotal
+        For iCnt From 0 To iTotal
+            Get Windows_Message LVM_GETITEMSTATE iCnt LVIS_FOCUSED To iRetVal
+            If iRetVal Function_Return iCnt
+        Loop
+        Function_Return -1
+    End_Function
+
+    Procedure External_SetFocus
+        Integer iFail iCurrent
+        Move 0 To iFail
+        If (Focus(desktop) <> Self) Get msg_Activate To iFail
+        If Not iFail Begin
+            Send Notify_Focus_Change True
+            If (ItemCount(Self)) Begin
+                Get CurrentItem To iCurrent
+                If iCurrent Eq -1 Move 0 To iCurrent
+                Set CurrentItem To iCurrent
+            End
+            Send OnSetFocus
+        End
+    End_Procedure
+
+    Procedure External_KillFocus
+        Send OnKillFocus
+        Send Notify_Focus_Change False
+    End_Procedure
+
+    // Set focus is supposed to send notify_focus_change. It is not, so
+    // we will add this here.
+    Procedure Set Focus Integer h1 Integer h2
+      Integer rval
+      Forward Set focus To h1 h2
+      Send Notify_Focus_Change True
+    End_Procedure
+
+    Procedure Set ItemData Integer iItem Integer iData
+        String sLV
+        Pointer lpsLV
+        
+        ZeroType tLVITEM To sLV
+        Put (LVIF_PARAM)  To sLV At tLVITEM.mask
+        Put iItem         To sLv At tLVITEM.iItem
+        Put iData         To sLV At tLVITEM.lparam
+    
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_SETITEM 0 lpsLV
+    End_Procedure
+
+    Function ItemData Integer iItem Returns Integer
+        String sLV
+        Pointer lpsLV
+        Integer iRetVal
+        
+        ZeroType tLVITEM To sLV
+        Put (LVIF_PARAM) To sLV At tLVITEM.mask
+        Put iItem         To sLv At tLVITEM.iItem
+    
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_GETITEM 0 lpsLV
+        GetBuff From sLV At tLVITEM.lParam To iRetVal
+        Function_Return iRetVal
+    End_Function
+
+    Procedure Set ItemIndent Integer iItem Integer iIndentLevel
+        String sLV
+        Pointer lpsLV
+        
+        ZeroType tLVITEM To sLV
+        Put (LVIF_INDENT) To sLV At tLVITEM.mask
+        Put iItem         To sLv At tLVITEM.iItem
+        Put iIndentLevel                 To sLv At tLVITEM.iIndent
+    
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_SETITEM 0 lpsLV
+    End_Procedure
+
+    Function ItemIndent Integer iItem Returns Integer
+        String sLV
+        Pointer lpsLV
+        Integer iRetVal
+        
+        ZeroType tLVITEM To sLV
+        Put (LVIF_INDENT) To sLV At tLVITEM.mask
+        Put iItem         To sLv At tLVITEM.iItem
+    
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_GETITEM 0 lpsLV
+        GetBuff From sLV At tLVITEM.iIndent To iRetVal
+        Function_Return iRetVal
+    End_Function
+
+    Procedure Set ItemStateImage Integer iItem Integer iIndex
+        String sLV
+        Pointer lpsLV
+        Integer iVoid
+
+        ZeroType tLVITEM To sLV
+        Put (lshift((iIndex + 1), 12)) To sLV At tLVITEM.state
+        Put (LVIS_STATEIMAGEMASK) To sLV At tLVITEM.StateMask
+    
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_SETITEMSTATE iItem lpsLV
+        Move (invalidatergnEf(window_handle(Self), 0, DFTRUE)) To iVoid
+    End_Procedure
+
+    Function ItemStateImage Integer iItem Returns Integer
+        Integer iRetVal
+        Get WindowsMessage LVM_GETITEMSTATE iItem LVIS_STATEIMAGEMASK To iRetVal
+        Function_Return (rshift(iRetVal, 12) - 1)
+    End_Function
+    
+    Procedure Set ItemCutState Integer iItem Integer bNotify
+        Pointer lpsLVITEM
+        String sLVITEM
+
+        ZeroType tLVITEM To sLVITEM
+
+        Put iItem                           To sLVITEM At tLVITEM.iItem
+        Put (LVIF_STATE)                    To sLVITEM At tLVITEM.mask
+        Put LVIS_CUT                        To sLVITEM At tLVITEM.stateMask
+        Put (LVIS_CUT Ior bNotify)          To sLVITEM At tLVITEM.State
+
+        GetAddress Of sLVITEM To lpsLVITEM
+
+        Send Windows_Message LVM_SETITEM 0 lpsLVITEM
+
+    End_Procedure
+    
+    Function ItemCutState Integer iItem Returns Boolean
+        Function_Return (WindowsMessage(LVM_GETITEMSTATE, iItem, LVIS_CUT))
+    End_Function
+    
+    Procedure Set ItemLabel Integer iItem Integer iSubItem String sLabel
+        String sLV
+        Pointer lpsLV lpszText
+        Integer iVoid
+        
+        Move (sLabel + Character(0)) To sLabel
+        GetAddress Of sLabel To lpszText
+        Move (oemtoansi(lpszText, lpszText)) To iVoid
+        
+        ZeroType tLVITEM To sLV
+        Put lpszText      To sLV At tLVITEM.pszText
+        Put iSubItem      To sLV At tLVITEM.iSubItem
+    
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_SETITEMTEXT iItem lpsLV
+    
+    End_Procedure
+
+    Function ItemLabel Integer iItem Integer iSubItem Returns String
+        String sLV sLabel
+        Pointer lpsLV lpszText
+        Integer iVoid
+        
+        ZeroString 255 To sLabel
+        GetAddress Of sLabel To lpszText
+        
+        ZeroType tLVITEM To sLV
+        Put lpszText      To sLV At tLVITEM.pszText
+        Put iSubItem      To sLV At tLVITEM.iSubItem
+        Put 254           To sLV At tLVITEM.cchTextMax
+    
+        GetAddress Of sLV To lpsLV
+        Send Windows_Message LVM_GETITEMTEXT iItem lpsLV
+    
+        Move (ansitooem(lpszText, lpszText)) To iVoid
+        Function_Return (CString(sLabel))
+    End_Function
+    
+    Procedure Set ItemHighlightState Integer iItem Boolean bState
+        Pointer lpsLVITEM
+        String sLVITEM
+
+        ZeroType tLVITEM To sLVITEM
+
+        Put (Integer(bState) * LVIS_DROPHILITED) To sLVITEM At tLVITEM.stateMask
+        Put (LVIS_DROPHILITED Ior bState)                To sLVITEM At tLVITEM.State
+
+        GetAddress Of sLVITEM To lpsLVITEM
+
+        Send Windows_Message LVM_SETITEMSTATE iItem lpsLVITEM
+    End_Procedure
+
+    Function ItemHighlightState Integer iItem Returns Boolean
+        Function_Return (cast(WindowsMessage(LVM_GETITEMSTATE, iItem, LVIS_DROPHILITED), Boolean))
+    End_Function
+    
+    Procedure Set ItemSelectState Integer iItem Boolean bState
+        Pointer lpsLVITEM
+        String sLVITEM
+
+        ZeroType tLVITEM To sLVITEM
+
+        Put (Integer(bState) * LVIS_SELECTED) To sLVITEM At tLVITEM.stateMask
+        Put (LVIS_SELECTED Ior bState)               To sLVITEM At tLVITEM.State
+
+        GetAddress Of sLVITEM To lpsLVITEM
+
+        Send Windows_Message LVM_SETITEMSTATE iItem lpsLVITEM
+    End_Procedure
+
+    Function ItemSelectState Integer iItem Returns Boolean
+        Function_Return (cast(WindowsMessage(LVM_GETITEMSTATE, iItem, LVIS_SELECTED), Boolean))
+    End_Function
+
+    Procedure Set ItemImage Integer iItem Integer iImage
+    
+    End_Procedure
+
+    Function ItemImage Integer iItem Returns Integer
+        Integer iData
+        String sLV
+        Pointer lpsLV
+        ZeroType tLVITEM To sLV
+
+        Put LVIF_IMAGE To sLV At tLVITEM.mask
+        Put iItem      To sLv At tLVITEM.iItem
+
+        GetAddress Of sLV To lpsLV
+
+        Send Windows_Message LVM_GETITEM 0 lpsLV
+
+        GetBuff From sLV At tLVITEM.iImage To iData
+        Function_Return iData
+    End_Function
+
+    Procedure Set phNormalIL Handle hWndIL
+        Set Private.phNormalIL To hWndIL
+        Send Windows_Message LVM_SETIMAGELIST LVSIL_NORMAL hWndIL
+    End_Procedure
+
+    Function phNormalIL Returns Handle
+        Function_Return (private.phNormalIL(Self))
+    End_Function
+
+    Procedure Set phSmallIL Handle hWndIL
+        Set Private.phSmallIL To hWndIL
+        Send Windows_Message LVM_SETIMAGELIST LVSIL_SMALL hWndIL
+    End_Procedure
+
+    Function phSmallIL Returns Handle
+        Function_Return (private.phSmallIL(Self))
+    End_Function
+
+    Procedure Set phStateIL Handle hWndIL
+        Set Private.phStateIL To hWndIL
+        Send Windows_Message LVM_SETIMAGELIST LVSIL_STATE hWndIL
+    End_Procedure
+
+    Function phStateIL Returns Handle
+        Function_Return (private.phStateIL(Self))
+    End_Function
+
+    Procedure Set piBackColor Integer iRGB
+        Send Windows_Message LVM_SETBKCOLOR 0 iRGB
+        Set Private.piBackColor To iRGB
+    End_Procedure
+    
+    Function piBackColor Returns Integer
+        Function_Return (Private.piBackColor(Self))
+    End_Function
+    
+    Procedure Set piTextBackColor Integer iRGB
+        Send Windows_Message LVM_SETTEXTBKCOLOR 0 iRGB
+        Set Private.piTextBackColor To iRGB
+    End_Procedure
+    
+    Function piTextBackColor Returns Integer
+        Function_Return (Private.piTextBackColor(Self))
+    End_Function
+    
+    Procedure Set piTextColor Integer iRGB
+        Send Windows_Message LVM_SETTEXTCOLOR 0 iRGB
+        Set Private.piTextColor To iRGB
+    End_Procedure
+    
+    Function piTextColor Returns Integer
+        Function_Return (Private.piTextColor(Self))
+    End_Function
+
+//    Procedure Set psBackgroundImage String sFileName Integer xOffsetPercent Integer yOffsetPercent
+//        string sLVBKIMAGE szImage
+//        pointer lpsLVBKIMAGE lpszImage
+//        
+//        ZeroType tLVBKIMAGE to sLVBKIMAGE
+//        
+//        move (sFileName + character(0)) to szImage
+//        GetAddress of szImage to lpszImage
+//        
+//        Set Private.psBackgroundImage to sFileName
+//        if (sFileName <> "") begin
+//            Put (LVBKIF_SOURCE_URL ior LVBKIF_STYLE_NORMAL) to sLVBKIMAGE at tLVBKIMAGE.ulFlags
+//            Put lpszImage to sLVBKIMAGE at tLVBKIMAGE.pszImage
+//            Put (length(szImage)) to sLVBKIMAGE at tLVBKIMAGE.cchImageMax
+//            if (num_arguments >= 2) put xOffsetPercent to sLVBKIMAGE at tLVBKIMAGE.xOffsetPercent
+//            if (num_arguments >= 3) put yOffsetPercent to sLVBKIMAGE at tLVBKIMAGE.yOffsetPercent
+//        end
+//        else begin
+//            Put (LVBKIF_SOURCE_NONE) to sLVBKIMAGE at tLVBKIMAGE.ulFlags
+//        end
+//        GetAddress of sLVBKIMAGE to lpsLVBKIMAGE
+//        
+//        Send Windows_Message LVM_SETBKIMAGE 0 lpsLVBKIMAGE
+//    end_procedure
+//
+//    Function psBackgroundImage returns string
+//        function_return (Private.psBackgroundImage(self))
+//    end_Function
+//
+    Procedure Set piView Integer iView
+        Integer iVoid iStyle
+        Set Private.piView To iView
+        Move (GetWindowLong(window_handle(Self), GWL_STYLE)) To iStyle
+        
+        // The reason for the whole MAXUINT - LVS_TYPEMASK is that we need to emulate
+        // from C++ ~LVS_TYPEMASK.  Well, VDF doesn't have a way of doing this.  What 
+        // this does is does a reversal of all of the bits within the 32 bit integer.
+        // So what I do is define the max value for a UINT and subtract my mask from
+        // this number.  It gives me the same effect. - OTN
+        Move (SetWindowLong(window_handle(Self), GWL_STYLE, ((iStyle Iand (MAXUINT - LVS_TYPEMASK)) Ior iView) )) To iVoid
+    End_Procedure
+    
+    Function piView Returns Integer
+        Function_Return (Private.piView(Self))
+    End_Function
+    
+    //
+    //=============================== Procedures ===================================
+    //
+
+    Procedure DoInsertColumn String sLabel Integer iPosition Integer iWidth Integer iTextAlign
+        // iTextAlign has these options:
+        //  LVCFMT_BITMAP_ON_RIGHT  Version 4.70. The bitmap appears to the right of text. This does not affect an image from an image list assigned to the header item. 
+        //  LVCFMT_CENTER  Text is centered. 
+        //  LVCFMT_COL_HAS_IMAGES  Version 4.70. The header item contains an image in the image list. 
+        //  LVCFMT_IMAGE  Version 4.70. The item displays an image from an image list.  
+        //  LVCFMT_LEFT  Text is left-aligned. 
+        //  LVCFMT_RIGHT  Text is right-aligned. 
+        
+        String szLVCOLUMN
+        Pointer lpszLVCOLUMN lpszLabel
+        Integer iRet
+        
+        Move (sLabel + Character(0)) To sLabel
+        GetAddress Of sLabel To lpszLabel
+        
+        ZeroType tLVCOLUMN To szLVCOLUMN
+        Put (LVCF_FMT Ior LVCF_TEXT Ior LVCF_WIDTH) To szLVCOLUMN At tLVCOLUMN.mask
+        Put iTextAlign To szLVCOLUMN At tLVCOLUMN.fmt
+        Put iWidth To szLVCOLUMN At tLVCOLUMN.cx
+        Put lpszLabel To szLVCOLUMN At tLVCOLUMN.pszText
+        Put (length(sLabel)) To szLVCOLUMN At tLVCOLUMN.cchTextMax
+        
+        GetAddress Of szLVCOLUMN To lpszLVCOLUMN
+//        Send Windows_Message LVM_INSERTCOLUMN iPosition lpszLVCOLUMN
+        Move (SendMessage(Window_Handle(Self), LVM_INSERTCOLUMN, iPosition, lpszLVCOLUMN)) To iRet
+        If (iRet<>-1) Set Columns_Count To (Columns_Count(Self)+1)
+        Procedure_Return iRet
+    End_Procedure
+
+    Procedure Set ColumnWidth Integer iCol Integer cx
+        Send Windows_Message LVM_SETCOLUMNWIDTH iCol cx
+    End_Procedure
+    Function ColumnWidth Integer iCol Returns Integer
+        Function_Return (SendMessage(Window_Handle(Self), LVM_GETCOLUMNWIDTH, iCol, 0))
+    End_Function
+    
+    Procedure DoDeleteColumn Integer iColumn
+        If (Columns_Count(Self)=0) Procedure_Return
+        Integer iRet
+//        Send Windows_Message LVM_DELETECOLUMN iColumn 0
+        Move (SendMessage(Window_Handle(Self), LVM_DELETECOLUMN, iColumn, 0)) To iRet
+        If (iRet) Set Columns_Count To (Columns_Count(Self)-1)
+        Procedure_Return iRet
+    End_Procedure
+    
+    Procedure DoDeleteAllColumns
+        Integer iRet
+        While (Columns_Count(Self))
+            Get Msg_DoDeleteColumn 0 To iRet
+            If (Not(iRet)) Break
+        Loop
+    End_Procedure
+    
+    Procedure DoDeleteItem Integer iItem
+        Send Windows_Message LVM_DELETEITEM iItem 0
+    End_Procedure
+
+    Procedure DoDeleteAllItems
+        Send Windows_Message LVM_DELETEALLITEMS 0 0
+    End_Procedure
+
+    Procedure DoResizeColumns Integer iGap
+        Integer iDelta iCols iLast iCol iWidth
+        Get Columns_Count To iCols
+        If (iCols=0) Procedure_Return
+        Move (iGap/iCols) To iDelta
+        Move (iGap-(iDelta*iCols)) To iLast
+        Decrement iCols
+        For iCol From 0 To iCols
+            Get ColumnWidth iCol To iWidth
+            If (iCol<>iCols) Set ColumnWidth iCol To (iWidth+iDelta)
+            Else             Set ColumnWidth iCol To (iWidth+iDelta+iLast)
+        Loop
+    End_Procedure
+    
+    Procedure DoResizeList Integer iYGap Integer iXGap
+        If ((iXGap)And(pbAllowResizeColumns(Self))) Send DoResizeColumns iXGap
+        Send OnResizeList iYGap iXGap
+    End_Procedure
+    
+    Procedure OnResizeList Integer iYGap Integer iXGap
+    End_Procedure
+    
+    Procedure Set GuiSize Integer iY Integer iX
+        Integer cyx
+        Get GUISize To cyx
+        Forward Set GuiSize To iY iX
+        Send DoResizeList (iY-hi(cyx)) (iX-Low(cyx))
+    End_Procedure
+
+    //
+    //================================ Functions ===================================
+    //
+
+    Function ItemHitWhat Returns Integer 
+        Handle hWnd
+        Integer iItem iX iY iVoid iFlags
+        String sPt sLvhtst
+        Pointer lpsPt lpsLvhtst
+
+        Get Window_Handle To hWnd
+        ZeroType tPOINT To sPt
+        GetAddress Of sPt To lpsPt
+        Move (GetCursorPos(lpsPt)) To iVoid
+        Move (ScreenToClient(hWnd, lpsPt)) To iVoid
+        GetBuff From sPt At tPOINT.x To iX
+        GetBuff From sPt At tPOINT.y To iY
+
+        ZeroType tLVHITTESTINFO To sLvhtst
+        Put iX To sLvhtst At tLVHITTESTINFO.Pt.x
+        Put iY To sLvhtst At tLVHITTESTINFO.Pt.y
+        GetAddress Of sLvhtst To lpsLvhtst
+        Get WindowsMessage LVM_HITTEST 0 lpsLvhtst To iItem
+        
+        GetBuff From sLvhtst At tLVHITTESTINFO.flags To iFlags
+        Function_Return iFlags
+
+    End_Function
+
+    Function HitTest Returns Integer 
+        Handle hWnd
+        Integer iItem iX iY iVoid iFlags
+        String sPt sLvhtst
+        Pointer lpsPt lpsLvhtst
+
+        Get Window_Handle To hWnd
+        ZeroType tPOINT To sPt
+        GetAddress Of sPt To lpsPt
+        Move (GetCursorPos(lpsPt)) To iVoid
+        Move (ScreenToClient(hWnd, lpsPt)) To iVoid
+        GetBuff From sPt At tPOINT.x To iX
+        GetBuff From sPt At tPOINT.y To iY
+
+        ZeroType tLVHITTESTINFO To sLvhtst
+        Put iX To sLvhtst At tLVHITTESTINFO.Pt.x
+        Put iY To sLvhtst At tLVHITTESTINFO.Pt.y
+        GetAddress Of sLvhtst To lpsLvhtst
+        Get WindowsMessage LVM_HITTEST 0 lpsLvhtst To iItem
+        
+        Function_Return iItem
+    End_Function
+
+    Function ItemCount Returns Integer
+        Function_Return (WindowsMessage(LVM_GETITEMCOUNT, 0, 0))
+    End_Function
+    
+    Function AddListItem String sLabel Integer iData Integer iIndent Integer iImage Integer iStateImage Returns Integer
+        Integer iItem iVoid
+        Pointer lpsLvItem lpszLabel
+        String sLvItem szLabel
+
+        Move (sLabel + Character(0)) To szLabel
+        GetAddress Of szLabel To lpszLabel
+        Move (OemToAnsi(lpszLabel, lpszLabel)) To iVoid
+        ZeroType tLVITEM To sLvItem
+        Put (LVIF_TEXT Ior LVIF_IMAGE Ior LVIF_PARAM Ior LVIF_STATE Ior LVIF_INDENT) To sLvItem At tLVITEM.mask
+        Put lpszLabel            To sLvItem At tLVITEM.pszText
+        Put (ItemCount(Self))   To sLvItem At tLVITEM.iItem
+        Put 0                    To sLvItem At tLVITEM.iSubItem
+        Put iImage               To sLvItem At tLVITEM.iImage
+        Put iData                To sLvItem At tLVITEM.lParam
+        Put iIndent              To sLvItem At tLVITEM.iIndent
+        Put (lshift((iStateImage+1), 12))          To sLvItem At tLVITEM.state
+        Put LVIS_STATEIMAGEMASK  To sLvItem At tLVITEM.statemask
+
+        GetAddress Of sLvItem To lpsLvItem
+        Get Windows_Message LVM_INSERTITEM 0 lpsLvItem To iItem
+        Function_Return iItem
+    End_Function
+    
+    Function InsertListItem String sLabel Integer iData Integer iIndent Integer iImage Integer iStateImage Integer iInsertBefore Returns Integer
+        Integer iItem iVoid
+        Pointer lpsLvItem lpszLabel
+        String sLvItem szLabel
+        Move (sLabel +Character(0)) To szLabel
+        GetAddress Of szLabel To lpszLabel
+        Move (OemToAnsi(lpszLabel, lpszLabel)) To iVoid
+        ZeroType tLVITEM To sLvItem
+        Put (LVIF_TEXT Ior LVIF_IMAGE Ior LVIF_PARAM Ior LVIF_STATE Ior LVIF_INDENT) To sLvItem At tLVITEM.mask
+        Put lpszLabel            To sLvItem At tLVITEM.pszText
+        Put iInsertBefore         To sLvItem At tLVITEM.iItem
+        Put 0                    To sLvItem At tLVITEM.iSubItem
+        Put iImage               To sLvItem At tLVITEM.iImage
+        Put iData                To sLvItem At tLVITEM.lParam
+        Put iIndent              To sLvItem At tLVITEM.iIndent
+        Put (lshift((iStateImage+1), 12))          To sLvItem At tLVITEM.state
+        Put LVIS_STATEIMAGEMASK  To sLvItem At tLVITEM.statemask
+
+        GetAddress Of sLvItem To lpsLvItem
+        Get Windows_Message LVM_INSERTITEM 0 lpsLvItem To iItem
+        Function_Return iItem
+    End_Function
+    
+    Function NextItem Integer iItem Returns Integer
+        Function_Return (WindowsMessage(LVM_GETNEXTITEM, iItem, LVNI_ALL))
+    End_Function
+
+    Function FindItemText String sText Returns Integer
+        Local String  sLV_FINDINFO
+        Local Pointer pLV_FINDINFO pText
+        Local Integer iItem
+
+        Move (sText+Character(0)) To sText
+        ZeroType LV_FINDINFO To sLV_FINDINFO
+        GetAddress Of sLV_FINDINFO To pLV_FINDINFO
+        GetAddress Of sText To pText
+
+        Put LVFI_STRING To sLV_FINDINFO At LV_FINDINFO.flags
+        Put pText       To sLV_FINDINFO At LV_FINDINFO.psz
+
+        Get Windows_Message LVM_FINDITEM -1 pLV_FINDINFO To iItem
+        Function_Return iItem
+    End_Function
+    
+    Procedure FindText String sText 
+        Integer iItem
+        Get FindItemText sText To iItem
+        If (iItem<>-1) Set CurrentItem To iItem
+    End_Procedure
+    
+End_Class
+
+Class cWinListView Is A cBaseListView
+    Procedure Construct_Object
+        Forward Send Construct_Object
+    End_Procedure
+
+    Procedure Set piNormalImageList Integer iObj
+        Local Integer hImgList
+        If (iObj) Begin
+            Get Window_Handle Of iObj To hImgList
+            If (hImgList) Set phNormalIL To hImgList 
+        End
+    End_Procedure
+    Procedure Set piSmallImageList Integer iObj
+        Local Integer hImgList
+        If (iObj) Begin
+            Get Window_Handle Of iObj To hImgList
+            If (hImgList) Set phSmallIL To hImgList 
+        End
+    End_Procedure
+    Procedure Set piStateImageList Integer iObj
+        Local Integer hImgList
+        If (iObj) Begin
+            Get Window_Handle Of iObj To hImgList
+            If (hImgList) Set phStateIL To hImgList 
+        End
+    End_Procedure
+    Function ObjectUnderCursor Returns Integer
+        Local Handle  hWnd
+        Local Integer x y hoDrop
+        Local String  sPoint
+        Local Pointer lpsPoint
+    
+        ZeroType tPoint                 To sPoint
+        GetAddress Of sPoint            To lpsPoint
+    
+        Move (GetCursorPos(lpsPoint))   To windowindex
+        GetBuff From sPoint At tPoint.x To x
+        GetBuff From sPoint At tPoint.y To y
+        Move (WindowFromPoint(x,y))     To hWnd
+        GET_OBJECT_FROM_WINDOW hWnd     To hoDrop
+        Function_Return hoDrop
+    End_Function
+End_Class
+

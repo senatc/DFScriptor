@@ -1,0 +1,128 @@
+// Sample DF Script (Scopes)
+// (C) 2017, Just for Fun, by Sergey V. Natarov
+// This sample demonstrates usage of some DataFlex Scriptor
+// scope based operations.
+//
+
+// ************************
+// ***  Script Objects  ***
+// ************************
+
+Object oMyArray1 Is an Array
+End_Object
+
+Object oMyArray2 Is an Array
+End_Object
+
+Object oMyArray3 Is an Array
+End_Object
+
+// Object Info
+// Set value
+Handle hArray
+Move (oMyArray1(Self)) To hArray
+Showln "0001 oMyArray1=" hArray
+
+Showln "0002 New Object created: " (oMyArray1(Self)) "=(" (Name(oMyArray1(Self))) ")"
+Showln "0003 New Object created: " (oMyArray2(Self)) "=(" (Name(oMyArray2(Self))) ")"
+Showln "0004 New Object created: " (oMyArray3(Self)) "=(" (Name(oMyArray3(Self))) ")"
+
+Set Value Of (oMyArray1(Self)) Item 0 To "Test0"
+Set Value Of (oMyArray1(Self)) Item 1 To "Test1"
+Set Value Of (oMyArray1(Self)) Item 2 To "Test2"
+Set Value Of hArray                 3 To "Test3"
+Showln "0005 oMyArray1 Count=" (Item_Count(oMyArray1(Self))) 
+
+// Get Value
+String sValue
+Integer iItem iCount
+Get Item_Count Of (oMyArray1(Self)) To iCount
+For iItem From 0 To (iCount-1)
+    Get Value Of (oMyArray1(Self)) Item iItem To sValue
+    Showln (Right("0000"+String(6+iItem), 4)) " Value[" iItem "]=" sValue
+Loop
+
+// ************************
+// ***  Script Methods  ***
+// ************************
+
+Integer iMode
+
+Function mStack Integer iPar1 Returns Number
+    Move ((iPar1*2)-(iPar1/2)) To iPar1
+    Function_Return iPar1
+End_Function
+
+Function mSomeMethod Integer iPar Integer iPar1 Returns Number
+    Number nRetVal
+    Move (1+mStack(Self, (iPar1+1))+iPar) To nRetVal
+    Function_Return nRetVal
+End_Function
+
+Move 30 To iMode
+Move ( (iMode * 2) + mSomeMethod(Self, 3, 3) ) To iMode
+Showln "0010 iMode=" iMode
+
+Function mFunctionSample Number nPar1 Number nPar2 Returns Number
+    Number nRetValue
+    Showln "0011 mFunctionSample::nPar1=" nPar1
+    Showln "0012 mFunctionSample::nPar2=" nPar2
+    Move (nPar1+nPar2) To nRetValue
+    Showln "0013 mFunctionSample::nRetValue(nPar1+nPar2)=" nRetValue
+    Function_Return nRetValue
+End_Function
+                            
+Procedure mProcedureSample
+    Number nValue
+    Move (Sin(45)) To nValue
+    Showln "0014 mProcedureSample::nValue=" nValue
+End_Procedure
+
+Procedure Set mProcedureSetSample Integer iPar Integer iValue
+    Showln "0015 Set mProcedureSetSample::iPar=" iPar " to " iValue
+End_Procedure
+Function mProcedureSetSample Integer iPar Returns Integer
+    Showln "0016 Get mProcedureSetSample::iPar=" iPar
+    Function_Return iPar
+End_Function
+
+Get  mFunctionSample (3+2) 4 To iMode
+Showln "0017 iMode=" iMode
+// Not Defined. Will generate an Error
+//Send mFunctionSample (3+2) 4
+
+// Script Procedure Call (no arguments)
+Send mProcedureSample
+
+// Script Set Call (2 arguments)
+Get mProcedureSetSample 1     To iMode
+Set mProcedureSetSample iMode To 3
+Showln "0018 GET/SET=" iMode
+// Not Defined. Will generate an Error
+//Send mProcedureSetSample 3 4
+
+
+// ******************************
+// ***  DataFlex/Application  ***
+// ******************************
+
+// Built-in Function Call
+String sTest
+Move ("Test ::"*String(25)) To sTest
+Showln "0019 Test=" sTest
+
+// Application Function Call
+Date dNow
+Get dfsCurrentDate To dNow
+Showln "0020 Now=" dNow
+
+// Operations with the Application objects
+Handle hOrder
+Move (oDbContainer3d1(oOrderEntryView(oClientArea(Self)))) To hOrder
+Showln "0021 Order View Header: " hOrder "=" (Name(hOrder))
+Showln "0022 Order View Date  : " (oOrderHea_Order_Date(hOrder)) "=" (Name(oOrderHea_Order_Date(hOrder)))
+Set Value Of (oOrderHea_Order_Date(hOrder)) 0 To dNow
+
+Sleep 1
+Send Info_Box sTest ("Application"*"DFScriptor")
+

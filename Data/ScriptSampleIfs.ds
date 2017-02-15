@@ -1,0 +1,61 @@
+// Sample DF Script (If Statements)
+// (C) 2017, Just for Fun, by Sergey V. Natarov
+// This sample demonstrates usage of DataFlex IF Commands
+// using different constructions in the DataFlex Scriptor
+//
+
+Integer iDataType iTest
+String sDataType
+Move (DF_BCD) To iDataType
+//
+If (iDataType=DF_ASCII) Showln "ASCII"
+Else Showln "SOMETHING ELSE"
+//
+If (iDataType<>DF_ASCII) Begin
+    Showln "NOT ASCII"
+End
+Else Begin
+    Showln iDataType
+End
+//
+If      (iDataType = DF_ASCII)   Move "ASC" To sDataType // 0
+Else If (iDataType = DF_BCD)     Move "NUM" To sDataType // 1
+Else If (iDataType = DF_DATE)    Move "DAT" To sDataType // 2
+Else If (iDataType = DF_OVERLAP) Move "OVL" To sDataType // 3
+Else If (iDataType = DF_TEXT)    Move "TXT" To sDataType // 5
+Else If (iDataType = DF_BINARY)  Move "BIN" To sDataType // 6
+
+Showln "A: " iDataType "=" sDataType
+
+If      (iDataType = DF_ASCII)   Begin
+                             Increment iTest
+                             Move "ASC" To sDataType // 0
+                             Showln sDataType
+End
+Else If (iDataType = DF_BCD)     Begin
+                             Increment iTest
+                             Move "NUM" To sDataType // 1
+                             Showln sDataType
+End
+Else If (iDataType = DF_DATE)    Begin
+                             Increment iTest
+                             Move "DAT" To sDataType // 2
+                             Showln sDataType
+End
+Else If (iDataType = DF_OVERLAP) Begin
+                             Increment iTest
+                             Move "OVL" To sDataType // 3
+                             Showln sDataType
+End
+Else If (iDataType = DF_TEXT)    Begin
+                             Increment iTest
+                             Move "TXT" To sDataType // 5
+                             Showln sDataType
+End                                               
+Else If (iDataType = DF_BINARY)  Begin
+                             Increment iTest
+                             Move "BIN" To sDataType // 6
+                             Showln sDataType
+End
+
+Showln "B: " iDataType "=" sDataType " >> " iTest

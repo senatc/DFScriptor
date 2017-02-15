@@ -1,0 +1,17 @@
+// Sample DF Script (All)
+// (C) 2017, Just for Fun, by Sergey V. Natarov
+// This sample combines all samples together
+//
+
+// Packages
+Use System.dp
+// Scopes
+#Include ScriptSampleScopes.ds
+// Input/Output
+#Include ScriptSampleInputOutput.ds
+// IFs
+#Include ScriptSampleIfs.ds
+// Attributes
+#Include ScriptSampleAttributes.ds
+// Database
+#Include ScriptSampleDatabase.ds

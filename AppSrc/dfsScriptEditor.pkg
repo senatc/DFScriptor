@@ -1,0 +1,233 @@
+Use cCodemax.pkg
+Move (CMRegisterControl(CM_VERSION)) to WindowIndex
+CMDeclareCommand CMD_FileNewFile                1 "FileNewFile"             "New script"
+CMDeclareCommand CMD_FileOpenFile               2 "FileOpenFile"            "Open a script"
+CMDeclareCommand CMD_FileSaveFile               3 "FileSaveFile"            "Saves the script"
+CMDeclareCommand CMD_CompileCurrent             4 "BuildCompile"            "Compiles the current script"
+CMDeclareCommand CMD_BuildRun                   5 "BuildRun"                "Builds the script (.DE)"
+CMDeclareCommand CMD_BuildExecute               6 "BuildExecute"            "Runs script"
+//
+//Integer giHK
+Class cSourceEditor is a cCodeMaxEdit
+    Procedure onRegisteredCmd Integer iCmd
+        if iCmd eq CMD_FileNewFile              send mScriptNew
+        if iCmd eq CMD_FileOpenFile             send mScriptOpen
+        if iCmd eq CMD_FileSaveFile             send mScriptSave
+        if iCmd eq CMD_CompileCurrent           send mScriptCompile
+        if iCmd eq CMD_BuildRun                 send mScriptBuild
+        if iCmd eq CMD_BuildExecute             send mScriptRun
+    End_Procedure
+    Procedure onPropsChange
+        // Pickup editor Properties eg. Move (CMGetHotkeys()) To sHotKeys etc.
+//Increment giHK
+//Direct_Output ("HK"+String(giHK))
+//Write (CMGetHotkeys())
+//Close_Output
+    End_Procedure
+    Function CanCut Returns Integer
+        Function_Return (CM_CanCut(Self))
+    End_Function
+    Function CanCopy Returns Integer
+        Function_Return (CM_CanCopy(Self))
+    End_Function
+    Function CanPaste Returns Integer
+        Function_Return (CM_CanPaste(Self))
+    End_Function
+    Function CanUndo Returns Integer
+        Function_Return (CM_CanUndo(Self))
+    End_Function
+    Function CanRedo Returns Integer
+        Function_Return (CM_CanRedo(Self))
+    End_Function
+    Function CanDelete Returns Integer
+        Function_Return (CM_CanCut(Self))
+    End_Function
+    Procedure Redo
+        Integer iRet
+        Get CM_Redo to iRet
+    End_Procedure
+    Procedure Undo
+        Integer iRet
+        Get CM_Undo to iRet
+    End_Procedure
+    Procedure Cut
+        Integer iRet
+        Get CM_Cut to iRet
+    End_Procedure
+    Procedure Delete
+        Integer iRet
+        Get CM_Cut to iRet
+    End_Procedure
+    Procedure Copy
+        Integer iRet
+        Get CM_Copy to iRet
+    End_Procedure
+    Procedure Paste
+        Integer iRet
+        Get CM_Paste to iRet
+    End_Procedure
+    Procedure RegisterLanguage
+        Integer iRet
+        Local_BUFFER  sName pName
+        Local_BUFFER sS pS 2000
+        Local_BUFFER  sBuff pBuff CM_LANGUAGE_SIZE
+        String sKw sOp sSc1 sSc2 sStr
+        Move (sKW+"Move\nSend\nGet\nTo\nIs\nIf\nForward\nDelegate\nElse\nSet\nProperty\n")      to sKw
+        Move (sKW+"Increment\nDecrement\nPos\nAppend\nLeft\nRight\nMid\nFrom\nTo\n")            to sKw
+        Move (sKW+"Local\nString\nDate\nInteger\nNumber\nChar\nUChar\nShort\nUShort\n")         to sKw
+        Move (sKW+"UInteger\nBigInt\nUBigInt\nCurrency\nDecimal\nFloat\nAddress\nTime\n")       to sKw
+        Move (sKW+"DateTime\nTimeSpan\nBoolean\nPointer\nHandle\nOf\nItem\nRegister_Object\n")  to sKw
+        Move (sKW+"Register_Procedure\nRegister_Function\nDeferred_View\nCase\n")               to sKw
+        Move (sKW+"Self\nProcedure_Return\nFunction_Return\nReturns\nUse\n#Include\nDefine\n")  to sKw
+        Move (sKW+"Activate_View\nShowln\n#Replace\nImport_Class_Protocol\nField\n")            to sKw
+        Move (sKW+"File_Field\nBroadcast\nReplace\nReplaces\nOverstrike\nRemove\nAscii\n")      to sKw
+        Move (sKW+"Character\nGet_Attribute\nSet_Attribute\nOn_Item\nEntry_Item\n")             to sKw
+        Move (sKW+"Constrain\nAbort_Transaction\nSave\nSaverecord\nClear\nDelete\nFind\n")      to sKw
+        Move (sKW+"Open\nClose\nWrite\nWriteln\nDirect_Input\nDirect_Output\n")                 to sKw
+        Move (sKW+"Close_Input\nClose_Output\nChannel\nAppend_Output\nOn_Key\nPublic\n")        to sKw
+        Move (sKW+"Do\nTrim\nRTrim\nLTrim\nError\nSysdate\nIndicator\nIndicate\n")              to sKw
+        Move (sKW+"External_function\nRead_Block\nMoveint\nMovestr\nMovenum\nReadln\n")         to sKw
+        Move (sKW+"Sysdate4\nSysdate\nZeroString\nGetAddress\nIfnot\nGet_File_Path\n")          to sKw
+        Move (sKW+"Set_Channel_Position\nGet_Channel_Position\nGet_Argument_Size\n#REM\n")      to sKw
+        Move (sKW+"Set_Argument_Size\n#SET\n#POP\n#PUSH\n#ERROR\n#SPUSH\n#CHECK\n#SPOP\n")      to sKw
+        Move (sKW+"Add\n#SET\nSubtract\nShow\nAs\nAbort\nSleep\n")                              to sKw
+        Move (sKW+"File_Exist\nPut\nAt\nCalc\nGetBuff\nInsert\nZeroType\nZeroFile\nGetBuff_String") to sKw
+        Move (sOp+"+\n-\n=\n*\n/\n<\n>\n<=\n>=\n<>\nOr\nAnd\nIn\nContains\nEq\nNe\nLt\nSeqEol\n")   to sOp
+        Move (sOp+"Script_Return\n")   to sOp
+        Move (sOp+"Gt\nGe\nLe\nNot\nIand\nIor\nfound\nseqeof\n~\n^\nTrue\nFalse\nerr\nlasterr")     to sOp
+        Move (sSc1+"Begin\nClass\nFunction\nProcedure\nObject\nRepeat\nFor\nWhile\n")           to sSc1
+        Move (sSc1+"Begin_Constraints\nProcedure_Section\nBegin_Row\nItem_List\n")              to sSc1
+        Move (sSc1+"Enumeration_List\nEnum_List\n#IFDEF\n#IFDEF\n#ELSE\nCd_Popup_Object\n")     to sSc1
+        Move (sSc1+"#COMMAND\nBegin_Transaction\nRepeat\n#IF\nFor_All\nDFCreate_Menu\n")        to sSc1
+        Move (sSc1+"DFCreate_Menu\n#IF\nType\n#IFSAME")                                         to sSc1
+        Move (sSc2+"End\nEnd_Class\nEnd_Function\nEnd_Procedure\nEnd_Object\nUntil\nLoop\n")    to sSc2
+        Move (sSc2+"Loop\nEnd_Constraints\nEnd_Procedure\nEnd_Row\nEnd_Item_List\n")            to sSc2
+        Move (sSc2+"End_Enumeration_List\nEnd_Enum_List\n#ELSE\n#ENDIF\n#ENDIF\n")              to sSc2
+        Move (sSc2+"Cd_End_Object\n#ENDCOMMAND\nEnd_Transaction\nUntil\n#ENDIF\n")              to sSc2
+        Move (sSc2+"End_For_All\nEnd_Pull_down\nEnd_Menu\n#ELSE\nEnd_Type\n#ENDIF")             to sSc2
+        Move ('"'+"\n'")  to sStr
+
+        Move "DataFlex" to sName
+        GetAddress of sName       to pName
+        Put                         0       to sBuff At CM_LANGUAGE.dwStyle
+        Put                         0       to sBuff At CM_LANGUAGE.bIsCaseSensitive
+        PUT_POINTEREx sTxt0  pTxt0  sKw     to sBuff At CM_LANGUAGE.pszKeywords
+        PUT_POINTEREx sTxt1  pTxt1  sOp     to sBuff At CM_LANGUAGE.pszOperators
+        PUT_POINTEREx sTxt2  pTxt2  "//"    to sBuff At CM_LANGUAGE.pszSingleLineComments
+        PUT_POINTEREx sTxt3  pTxt3  "{"     to sBuff At CM_LANGUAGE.pszMultiLineComments1
+        PUT_POINTEREx sTxt4  pTxt4  "}"     to sBuff At CM_LANGUAGE.pszMultiLineComments2
+        PUT_POINTEREx sTxt5  pTxt5  sSc1    to sBuff At CM_LANGUAGE.pszScopeKeywords1
+        PUT_POINTEREx sTxt6  pTxt6  sSc2    to sBuff At CM_LANGUAGE.pszScopeKeywords2
+        PUT_POINTEREx sTxt7  pTxt7  sStr    to sBuff At CM_LANGUAGE.pszStringDelims
+        PUT_String                  ""      to sBuff At CM_LANGUAGE.chEscape
+        PUT_String                  ""      to sBuff At CM_LANGUAGE.chTerminator
+        PUT_POINTEREx sTxt8  pTxt8  ""  to sBuff At CM_LANGUAGE.pszTagElementNames
+        PUT_POINTEREx sTxt9  pTxt9  ""      to sBuff At CM_LANGUAGE.pszTagAttributeNames
+        PUT_POINTEREx sTxt10 pTxt10 ""      to sBuff At CM_LANGUAGE.pszTagEntities
+        GetAddress of sBuff to pBuff
+        Move (CMRegisterLanguage(pName,pBuff))  to iRet
+    End_Procedure
+    Procedure SetAdjustments
+        Integer iRet
+        String sColors sFont sStyles sHotKeys
+        Move (sColors +"255255255000192192192000255255255255255255255255000000000000255255255000255") to sColors
+        Move (sColors +"000255000255255255000000000255000255255255000255000000000255255255000000000") to sColors
+        Move (sColors +"255000255255255000000128000000255255255000128128128000255255255000000128128") to sColors
+        Move (sColors +"000255255255255255000000000255255255255000000255000255255255255128000000000") to sColors
+        Move (sColors +"255255255255255255255000128128128000255255255255192192192000192192192000000") to sColors
+        Move (sFont   +"240255255255010000000000000000000000000000000000144001000000000000000255003") to sFont
+        Move (sFont   +"002001049067111117114105101114032078101119000000000000000000000000000000000") to sFont
+        Move (sFont   +"000000000000000000000000000000000") to sFont
+        Move (sStyles +"000000000000000002000001000001000000000") to sStyles
+
+        Move (sHotKeys+"001080000000000194000000009155001008000000000000053000000000000000000163000") to sHotKeys
+        Move (sHotKeys+"000009155001009000000000000053000000000000000000144000000009155001033000000") to sHotKeys
+        Move (sHotKeys+"000000053000000000000000000146000000009155001034000000000000053000000000000") to sHotKeys
+        Move (sHotKeys+"000000155000000009155001035000000000000053000000000000000000165000000009155") to sHotKeys
+        Move (sHotKeys+"001036000000000000053000000000000000000203000000009155001037000000000000053") to sHotKeys
+        Move (sHotKeys+"000000000000000000149000000009155001038000000000000053000000000000000000201") to sHotKeys
+        Move (sHotKeys+"000000009155001039000000000000053000000000000000000157000000009155001040000") to sHotKeys
+        Move (sHotKeys+"000000000053000000000000000000186000000009155001045000000000000053000000000") to sHotKeys
+        Move (sHotKeys+"000000000195000000009155001046000000000000053000000000000000000235003000000") to sHotKeys
+        Move (sHotKeys+"000000113000000000000000000000000000000000176000000009155001114000000000000") to sHotKeys
+        Move (sHotKeys+"053000000000000000000238003000000000000116000000000000000000000000000000000") to sHotKeys
+        Move (sHotKeys+"194000001009155001008000000000000053000000000000000000127000001009155001009") to sHotKeys
+        Move (sHotKeys+"000000000000053000000000000000000143000001009155001033000000000000053000000") to sHotKeys
+        Move (sHotKeys+"000000000000145000001009155001034000000000000053000000000000000000154000001") to sHotKeys
+        Move (sHotKeys+"009155001035000000000000053000000000000000000164000001009155001036000000000") to sHotKeys
+        Move (sHotKeys+"000053000000000000000000202000001009155001037000000000000053000000000000000") to sHotKeys
+        Move (sHotKeys+"000148000001009155001038000000000000053000000000000000000200000001009155001") to sHotKeys
+        Move (sHotKeys+"039000000000000053000000000000000000156000001009155001040000000000000053000") to sHotKeys
+        Move (sHotKeys+"000000000000000174000001009155001114000000000000053000000000000000000111000") to sHotKeys
+        Move (sHotKeys+"002009155001008000000000000053000000000000000000204000002000110000013000000") to sHotKeys
+        Move (sHotKeys+"000000186018000000000000000243000002000000000032000000000000000000000000000") to sHotKeys
+        Move (sHotKeys+"000000120000002009155001033000000000000053000000000000000000119000002009155") to sHotKeys
+        Move (sHotKeys+"001034000000000000053000000000000000000191000002009155001035000000000000053") to sHotKeys
+        Move (sHotKeys+"000000000000000000189000002009155001036000000000000053000000000000000000108") to sHotKeys
+        Move (sHotKeys+"000002009155001037000000000000053000000000000000000205000002000000000038000") to sHotKeys
+        Move (sHotKeys+"000000000000000000000000000000103000002009155001039000000000000053000000000") to sHotKeys
+        Move (sHotKeys+"000000000206000002000110000040000000000000186018000000000000000112000002009") to sHotKeys
+        Move (sHotKeys+"155001046000000000000053000000000000000000139000002009155001065000000000000") to sHotKeys
+        Move (sHotKeys+"053000000000000000000237003002000000000066000000000000000000000000000000000") to sHotKeys
+        Move (sHotKeys+"198000002009155001067000000000000053000000000000000000178000002009155001070") to sHotKeys
+        Move (sHotKeys+"000000000000053000000000000000000168000002009155001071000000000000053000000") to sHotKeys
+        Move (sHotKeys+"000000000000038004002000000000072000000000000000000000000000000000147000002") to sHotKeys
+        Move (sHotKeys+"000000000076000000000000000000000000000000000233003002000000000078000000000") to sHotKeys
+        Move (sHotKeys+"000000000000000000000000234003002000000000079000000000000000000000000000000") to sHotKeys
+        Move (sHotKeys+"000187000002009155001082000000000000053000000000000000000236003002000000000") to sHotKeys
+        Move (sHotKeys+"083000000000000000000000000000000000125000002000077000085000000000000183018") to sHotKeys
+        Move (sHotKeys+"000000000000000140000002009155001086000000000000053000000000000000000197000") to sHotKeys
+        Move (sHotKeys+"002009155001088000000000000053000000000000000000161000002009155001089000000") to sHotKeys
+        Move (sHotKeys+"000000053000000000000000000129000002009155001090000000000000053000000000000") to sHotKeys
+        Move (sHotKeys+"000000175000002009155001114000000000000053000000000000000000166000002009155") to sHotKeys
+        Move (sHotKeys+"001221000000000000053000000000000000000126000003009155001032000000000000053") to sHotKeys
+        Move (sHotKeys+"000000000000000000190000003009155001035000000000000053000000000000000000188") to sHotKeys
+        Move (sHotKeys+"000003009155001036000000000000053000000000000000000107000003009155001037000") to sHotKeys
+        Move (sHotKeys+"000000000053000000000000000000102000003009155001039000000000000053000000000") to sHotKeys
+        Move (sHotKeys+"000000000242000003000000000040000000000000000000000000000000000153000003009") to sHotKeys
+        Move (sHotKeys+"155001078000000000000053000000000000000000213000003009155001082000000000000") to sHotKeys
+        Move (sHotKeys+"053000000000000000000130000003009155001084000000000000053000000000000000000") to sHotKeys
+        Move (sHotKeys+"134000003009155001088000000000000053000000000000000000173000003009155001114") to sHotKeys
+        Move (sHotKeys+"000000000000053000000000000000000224000004009155001013000000000000053000000") to sHotKeys
+        Move (sHotKeys+"000000000000026004004000000000037000000000000000000000000000000000028004004") to sHotKeys
+        Move (sHotKeys+"000000000039000000000000000000000000000000000027004004000000000040000000000") to sHotKeys
+        Move (sHotKeys+"000000000000000000000000036004004000000000065000000000000000000000000000000") to sHotKeys
+        Move (sHotKeys+"000016004004000000000112000000000000000000000000000000000132000006009155001") to sHotKeys
+        Move (sHotKeys+"037000000000000053000000000000000000131000006009155001039000000000000053000") to sHotKeys
+        Move (sHotKeys+"000000000000000133000006009155001075000000000000053000000000000000000185000") to sHotKeys
+        Move (sHotKeys+"006009155001084000000000000053000000000000000000196000006009155001087000000") to sHotKeys
+        Move (sHotKeys+"000000053000000000000000000169000006009155001114000000000000053000000000000") to sHotKeys
+        Move (sHotKeys+"000000136000006009155001119000000000000053000000000000000000000") to sHotKeys
+        //
+        Move (CM_SetLanguage(Self,"DataFlex"))      to iRet
+        Move (CMSetHotkeys(sHotKeys))               To iRet
+        Move (CM_SetLineNumbering(Self, CM_HEXADECIMAL, 1, 0))   to iRet
+        Move (CM_EnableLeftMargin(Self,0))          to iRet        
+        Move (CM_SetColors(Self,sColors))           to iRet
+        Move (CM_EnableColorSyntax(Self,1))         to iRet
+        Move (CM_ShowScrollBar(Self,True,1))        to iRet
+        Move (CM_ShowScrollBar(Self,False,1))       to iRet
+        Move (CM_EnableSplitter(Self,True,0))       to iRet
+        Move (CM_EnableSplitter(Self,False,1))      to iRet
+        Move (CM_EnableSmoothScrolling(Self,1))     to iRet
+        Move (CM_EnableLineToolTips(Self,1))        to iRet
+        Move (CM_EnableDragDrop(Self,1))            to iRet
+        Move (CM_EnableColumnSel(Self,1))           to iRet
+        Move (CM_SetUndoLimit(Self,-1))             to iRet
+        Move (CM_SetAutoIndentMode(Self,2))         to iRet
+        Move (CM_SetTabSize(Self,4))                to iRet
+        Move (CM_EnableTabExpand(Self,1))           to iRet
+        Move (CM_EnableNormalizeCase(Self,1))       to iRet
+        Move (CM_EnablePreserveCase(Self,0))        to iRet
+        Move (CM_EnableSelBounds(Self,0))           to iRet
+        Move (CM_EnableCaseSensitive(Self,0))       to iRet
+        Move (CM_EnableWholeWord(Self,0))           to iRet
+        Move (CM_SetFont(Self,sFont))               to iRet
+        Move (CM_SetFontStyles(Self,sStyles))       to iRet
+    End_Procedure
+    Procedure Construct_Object
+        Send RegisterLanguage
+        Forward Send Construct_Object
+    End_Procedure
+End_Class
+

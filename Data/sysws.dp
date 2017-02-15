@@ -1,0 +1,22 @@
+// System Workspace Info DataFlex Scriptor Package
+// This file defines set of the predefined constants to retrieve workspace properties
+// Run-time pre-defined constants
+//
+
+Define dfsAppHtmlPath    for C_dfsAppHtmlPath
+Define dfsAppSrcPath     for C_dfsAppSrcPath
+Define dfsBitmapPath     for C_dfsBitmapPath
+Define dfsDataPath       for C_dfsDataPath
+Define dfsDDSrcPath      for C_dfsDDSrcPath
+Define dfsDescription    for C_dfsDescription
+Define dfsDFPath         for C_dfsDFPath
+Define dfsFileList       for C_dfsFileList
+Define dfsHelpPath       for C_dfsHelpPath
+Define dfsHome           for C_dfsHome
+Define dfsIDESrcPath     for C_dfsIDESrcPath
+Define dfsProgramPath    for C_dfsProgramPath
+Define dfsSystemDFPath   for C_dfsSystemDFPath
+Define dfsSystemMakePath for C_dfsSystemMakePath
+Define dfsWorkspaceName  for C_dfsWorkspaceName
+Define dfsWorkspaceFile  for C_dfsWorkspaceFile
+
