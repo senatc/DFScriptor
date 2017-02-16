@@ -35,9 +35,9 @@ Showln "0005 oMyArray1 Count=" (Item_Count(oMyArray1(Self)))
 
 // Get Value
 String sValue
-Integer iItem iCount
-Get Item_Count Of (oMyArray1(Self)) To iCount
-For iItem From 0 To (iCount-1)
+Integer iItem iSize
+Get Item_Count Of (oMyArray1(Self)) To iSize
+For iItem From 0 To (iSize-1)
     Get Value Of (oMyArray1(Self)) Item iItem To sValue
     Showln (Right("0000"+String(6+iItem), 4)) " Value[" iItem "]=" sValue
 Loop
