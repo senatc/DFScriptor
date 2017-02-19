@@ -2386,6 +2386,9 @@ Class cDFScriptor is a cDFScriptorBuilder
             If (iVariable=DFT_FILEFIELD)  Send SetFieldValue sVariable (&iToken)    sValue
         End
         If (iMode=DFC_SET_ATTRIBUTE) Begin
+            // Calculate "TO" value and then set attribute 
+            // (Might be Variable, File.Field, Constant, Expression etc.).
+            Get GetScriptValue iVariable sVariable (&iToken)                 to sValue
             If (iParameters=0) Set_Attribute iAttribute                      to sValue
             If (iParameters=1) Set_Attribute iAttribute of iPar1             to sValue
             If (iParameters=2) Set_Attribute iAttribute of iPar1 iPar2       to sValue
