@@ -31,6 +31,7 @@ End_Class
 
 Activate_View Activate_oDFSDebugger for oDFSDebugger
 Object oDFSDebugger is a dbView
+    //
     Set Label to "DataFlex Script Debugger"
     Set Size to 380 560
     Set Location to 5 7
@@ -39,8 +40,12 @@ Object oDFSDebugger is a dbView
     Set Maximize_Icon to True
     Set Bitmap_Style to Bitmap_Stretch
     Set Border_Style to Border_Thick
-    Property String psScriptSource ""
-    Property String psScriptGrammar ""
+    On_Key Key_Ctrl+Key_N Send mScriptNew
+    On_Key Key_Ctrl+Key_O Send mScriptOpen
+    On_Key Key_Ctrl+Key_S Send mScriptCompile
+    On_Key Key_Ctrl+Key_B Send mScriptBuild
+    On_Key Key_F2         Send mScriptSave
+    On_Key Key_F5         Send mScriptRun
 
     Set Icon to "Scriptor16.ico"
 
@@ -1280,6 +1285,7 @@ Object oDFSDebugger is a dbView
     Procedure mScriptRun
         Send Delete_Data to oDFScriptor
         If (psScriptSource(oDFScriptor(Self))="") Send mScriptOpen
+        Send mScriptSave
         Send Compile to oDFScriptor
         Send Add_Compiler_Info  to oDFScriptor 6 ("---- Running Script in Debugger ----")
         Send Add_Compiler_Info  to oDFScriptor 1 (psScriptSource(oDFScriptor(Self)))

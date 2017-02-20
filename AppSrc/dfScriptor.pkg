@@ -8,6 +8,7 @@ Use dfsSystem.pkg
 Class cDFScriptorBase is a cObject
     // Object constructor, defines all DFScriptor data
     Procedure Construct_Object
+        //
         Forward Send Construct_Object
         Property tDFSToken[]        ptTokens
         Property tDFSVariable[]     ptVariables
@@ -18,28 +19,36 @@ Class cDFScriptorBase is a cObject
         Property String[]           psScriptParameters
         Property String             psReturnValue
         //
-        Property Integer        piGeneratePRN   True // False
-        Property Integer        piPRNChannel    1
-        Property Integer        piScriptChannel 2
+        Property Integer            piGeneratePRN   True // False
+        Property Integer            piPRNChannel    1
+        Property Integer            piScriptChannel 2
         //
-        Property String         psScriptSource  ""
-        Property String         psScriptFile    ""
-        Property Integer        piExecutable    0
+        Property String             psScriptSource  ""
+        Property String             psScriptFile    ""
+        Property Integer            piExecutable    0
         // Metrics
-        Property TimeSpan       ptsCompileTime
+        Property TimeSpan           ptsCompileTime
         // Stats
-        Property Integer        piErrorsCount
-        Property Integer        piLinesCount
-        Property Integer        piTokensCount
-        Property Integer        piCommandsCount
-        Property Integer        piDirectivesCount
-        Property Integer        piVariablesCount
-        Property Integer        piConstantsCount
-        Property Integer        piObjectsCount
-        Property Integer        piMethodsCount
-        Property Integer        piScopeStartCount
+        Property Integer            piErrorsCount
+        Property Integer            piLinesCount
+        Property Integer            piTokensCount
+        Property Integer            piCommandsCount
+        Property Integer            piDirectivesCount
+        Property Integer            piVariablesCount
+        Property Integer            piConstantsCount
+        Property Integer            piObjectsCount
+        Property Integer            piMethodsCount
+        Property Integer            piScopeStartCount
+        Property Integer            piScopeStopCount
         //
-        Property Integer        piScopeStopCount
+        // Security
+        Property Boolean            pbAllowDFScriptSave         True
+        Property Boolean            pbAllowDFScriptDelete       True
+        Property Boolean            pbAllowDFScriptTransaction  True
+        Property Boolean            pbAllowDFScriptFind         True
+        Property Boolean            pbAllowDFScriptRestructure  True
+        Property Boolean            pbAllowDFScriptAttributes   True
+        Property String             psName                      ""
         //
     End_Procedure
     // Adds information about new method into the methods list
@@ -287,6 +296,12 @@ Class cDFScriptorBase is a cObject
                 Function_Return DFC_BEGIN_TRANSACTION
             Case (sImage="END_TRANSACTION")
                 Function_Return DFC_END_TRANSACTION
+            Case (sImage="STRUCTURE_START")
+                Function_Return DFC_STRUCTURE_START
+            Case (sImage="STRUCTURE_END")
+                Function_Return DFC_STRUCTURE_END
+            Case (sImage="STRUCTURE_ABORT")
+                Function_Return DFC_STRUCTURE_ABORT
             Case (sImage="SHOW")
                 Function_Return DFC_SHOW
             Case (sImage="SHOWLN")
@@ -780,7 +795,7 @@ Class cDFScriptorBase is a cObject
         Else If (iType=DFS_CONSTANT) Function_Return "|CI"
         Function_Return "|VI"
     End_Function
-    // Returns Dimansion Image (Debug and Output purposes)
+    // Returns Dimension Image (Debug and Output purposes)
     Function fDFSOutDim Integer iDimension Returns String
         Function_Return (Repeat("[]", iDimension))
     End_Function
@@ -1170,6 +1185,18 @@ Class cDFScriptorBase is a cObject
         Send Add_Compiler_Info 1 ("Load Time    : "+(String(DateGetMinute(tsTime))+'m'*String(DateGetSecond(tsTime))+'s'*String(DateGetMillisecond(tsTime))+"ms"))
         Send Add_Compiler_Info 4 ("---- Executable"*sExeFile*"Loaded ----")
         //
+    End_Procedure
+    Function Object_Short_Name String sName Returns String 
+        String sTmp
+        While (sName contains '.')
+            Move (Left(sName, Pos('.', sName))) to sTmp
+            Move (Replace(sTmp, sName, "")) to sName
+        Loop
+        Function_Return (Uppercase(sName))
+    End_Function
+    Procedure End_Construct_Object
+        Forward Send End_Construct_Object
+        Set psName to (Object_Short_Name(Self, Name(Object_Id(Self))))
     End_Procedure
 End_Class
 
@@ -2117,7 +2144,7 @@ Class cDFScriptor is a cDFScriptorBuilder
     End_Function
     //
     Function Process_Expression Integer ByRef iToken Returns String
-        Integer iSymbol iTokens iBrOpen iBrClose iString iScopeID
+        Integer iSymbol iTokens iBrOpen iBrClose iString iScopeID iProhibited
         String sExpression sValue sIndex sScope
         tDFSScope ltScope
         Move (SizeOfArray(gtDFSTokens)) to iTokens
@@ -2133,7 +2160,10 @@ Class cDFScriptor is a cDFScriptorBuilder
             If (iSymbol=DFT_ID) Begin
                 If (Left(sValue, 1)="|") Get Var_Value sValue (&iToken) to sValue
                 Else Begin
-                    Move (gtDFSTokens[iToken].sImage) to sValue // ToDo: Func in Exp!
+                    Move (gtDFSTokens[iToken].sImage) to sValue
+                    // Security Check
+                    If (psName(Self)=sValue) Move 1 to iProhibited
+                    // Check either Script Scope
                     If (SizeOfArray(gtDFSScopes)>1) Begin
                         Move sValue to ltScope.sName
                         Move (SearchArray(ltScope, gtDFSScopes)) to iScopeID
@@ -2157,8 +2187,12 @@ Class cDFScriptor is a cDFScriptorBuilder
             Move (sExpression+sValue) to sExpression
             If (iBrOpen=iBrClose) Move DFT_NEWLINE to iSymbol
         Loop
-        Move (Eval(sExpression)) to sExpression
-        If (iString) Move ('"'+sExpression+'"') to sExpression
+        If iProhibited  Begin
+            Move "-1" to sExpression
+            Error 500 "Access to the DFScriptor instance is prohibited."
+        End
+        Else            Move (Eval(sExpression))    to sExpression
+        If (iString)    Move ('"'+sExpression+'"')  to sExpression
         Function_Return sExpression
     End_Function
     //
@@ -2378,21 +2412,23 @@ Class cDFScriptor is a cDFScriptorBuilder
         End
         //
         If (iMode=DFC_GET_ATTRIBUTE) Begin
-            If (iParameters=0) Get_Attribute iAttribute                          to sValue
-            If (iParameters=1) Get_Attribute iAttribute of iPar1                 to sValue
-            If (iParameters=2) Get_Attribute iAttribute of iPar1 iPar2           to sValue
-            If (iParameters=3) Get_Attribute iAttribute of iPar1 iPar2 iPar3     to sValue
-            If (iVariable=DFT_ID)         Set  Var_Value     sVariable (&iToken) to sValue
-            If (iVariable=DFT_FILEFIELD)  Send SetFieldValue sVariable (&iToken)    sValue
+            If (iParameters=0)            Get_Attribute      iAttribute                        to sValue
+            If (iParameters=1)            Get_Attribute      iAttribute of iPar1               to sValue
+            If (iParameters=2)            Get_Attribute      iAttribute of iPar1 iPar2         to sValue
+            If (iParameters=3)            Get_Attribute      iAttribute of iPar1 iPar2 iPar3   to sValue
+            If (iVariable=DFT_ID)         Set                Var_Value     sVariable (&iToken) to sValue
+            If (iVariable=DFT_FILEFIELD)  Send SetFieldValue               sVariable (&iToken)    sValue
         End
         If (iMode=DFC_SET_ATTRIBUTE) Begin
-            // Calculate "TO" value and then set attribute 
-            // (Might be Variable, File.Field, Constant, Expression etc.).
-            Get GetScriptValue iVariable sVariable (&iToken)                 to sValue
-            If (iParameters=0) Set_Attribute iAttribute                      to sValue
-            If (iParameters=1) Set_Attribute iAttribute of iPar1             to sValue
-            If (iParameters=2) Set_Attribute iAttribute of iPar1 iPar2       to sValue
-            If (iParameters=3) Set_Attribute iAttribute of iPar1 iPar2 iPar3 to sValue
+            If (pbAllowDFScriptAttributes(Self)) Begin
+                // Calculate "TO" value and then set attribute 
+                // (Might be Variable, File.Field, Constant, Expression etc.).
+                Get GetScriptValue iVariable sVariable (&iToken)                               to sValue
+                If (iParameters=0)        Set_Attribute      iAttribute                        to sValue
+                If (iParameters=1)        Set_Attribute      iAttribute of iPar1               to sValue
+                If (iParameters=2)        Set_Attribute      iAttribute of iPar1 iPar2         to sValue
+                If (iParameters=3)        Set_Attribute      iAttribute of iPar1 iPar2 iPar3   to sValue
+            End
         End
         //
         Function_Return iToken
@@ -2494,7 +2530,10 @@ Class cDFScriptor is a cDFScriptorBuilder
             End
         End
         If (iScope<0) Begin
-            If (iCommand=DFC_SET)  Move (eval("SET_"+sToken)) to iMsg
+            If (iCommand=DFC_SET)  Begin
+                If (Left(sToken, 15)<>"PBALLOWDFSCRIPT") ;
+                    Move (eval("SET_"+sToken)) to iMsg
+            End
             If (iCommand=DFC_GET)  Move (eval("GET_"+sToken)) to iMsg
             If (iCommand=DFC_SEND) Move (eval("MSG_"+sToken)) to iMsg
         End
@@ -2655,7 +2694,7 @@ Class cDFScriptor is a cDFScriptorBuilder
                 Else      Send iMsg         sPar0  sPar1  sPar2  sPar3  sPar4  sPar5  sPar6  sPar7  sPar8  sPar9 ;
                                            sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19
             End
-        End
+        End // iMsg
         Else If iScope Begin
             Move gtDFSTokens                     to ltDFSTokens
             Move ltDFSScopes[iScope].atTokens    to gtDFSTokens
@@ -2668,7 +2707,7 @@ Class cDFScriptor is a cDFScriptorBuilder
             End
             Send Clear_Script
             Move ltDFSTokens                     to gtDFSTokens
-        End
+        End // iScope
         Function_Return iToken
     End_Function
     //
@@ -2698,36 +2737,39 @@ Class cDFScriptor is a cDFScriptorBuilder
             // Database File Operation
             If (iFile) Begin
                 If (iMode=DFC_CLEAR) Begin
-                    If (iFile<0)                Clear       DF_ALL
-                    Else                        Clear       iFile
+                    If (iFile<0)                            Clear       DF_ALL
+                    Else                                    Clear       iFile
                 End
                 If (iMode=DFC_CLOSE) Begin
                     If (iFile<0) Begin
-                        If (iCloseMode=-1)      Close       DF_ALL
-                        Else                    Close       DF_ALL iCloseMode
+                        If (iCloseMode=-1)                  Close       DF_ALL
+                        Else                                Close       DF_ALL iCloseMode
                     End
-                    Else                        Close       iFile
+                    Else                                    Close       iFile
                 End
                 If (iFile>0) Begin
-                    If (iMode=DFC_RELATE)       Relate      iFile
-                    If (iMode=DFC_REREAD)       Reread      iFile
-                    If (iMode=DFC_SAVE)         Save        iFile
-                    If (iMode=DFC_SAVERECORD)   SaveRecord  iFile
-                    If (iMode=DFC_DELETE)       Delete      iFile
-                    If (iMode=DFC_ATTACH)       Attach      iFile
+                    If (iMode=DFC_RELATE)                   Relate      iFile
+                    If (iMode=DFC_REREAD)                   Reread      iFile
+                    If (pbAllowDFScriptSave(Self)) Begin
+                        If (iMode=DFC_SAVE)                 Save        iFile
+                        If (iMode=DFC_SAVERECORD)           SaveRecord  iFile
+                    End
+                    If (pbAllowDFScriptDelete(Self)) Begin
+                        If (iMode=DFC_DELETE)               Delete      iFile
+                    End
+                    If (iMode=DFC_ATTACH)                   Attach      iFile
                 End
             End
             Else Begin
-                If (iMode=DFC_REREAD)           Reread
-                If (iMode=DFC_UNLOCK)           Unlock
-                If (iMode=DFC_LOCK)             Lock
+                If (iMode=DFC_REREAD)                       Reread
+                If (iMode=DFC_UNLOCK)                       Unlock
+                If (iMode=DFC_LOCK)                         Lock
             End
         Loop
         Function_Return iToken
     End_Function
     //
     Function Find_Statement Integer iToken Returns Integer
-        Integer iSym 
         Integer iMode iFile iIndex iSymbol
         String  sToken
         // Find mode
@@ -2756,13 +2798,56 @@ Class cDFScriptor is a cDFScriptorBuilder
             Move (Integer(Replace("INDEX.", sToken, ""))) to iIndex
         End
         //
-        Vfind iFile iIndex iMode
+        If (pbAllowDFScriptFind(Self)) ;
+            Vfind iFile iIndex iMode
+        Else Error 500 "Access to the DFScriptor instance is prohibited."
         Function_Return iToken
     End_Function
     //
     Function DBTrans_Statement Integer iMode Integer iToken Returns Integer
-        If (iMode=DFC_BEGIN_TRANSACTION) Begin_Transaction
-        If (iMode=DFC_END_TRANSACTION)   End_Transaction
+        If (pbAllowDFScriptTransaction(Self))  Begin
+            If (iMode=DFC_BEGIN_TRANSACTION) Begin_Transaction
+            If (iMode=DFC_END_TRANSACTION)   End_Transaction
+        End
+        Function_Return iToken
+    End_Function
+    //
+    // Structure_Start tableNum [driverName]
+    // Structure_End   tableNum [restructureOptions [tempDir [callBackObject]]]
+    // Structure_Abort tableNum
+    Function DBStruct_Statement Integer iMode Integer iToken Returns Integer
+        Integer iTableNum
+        Integer iSymbol iOptions
+        String  sToken sDriver
+        //
+        Move 0  to iOptions
+        Move "" to sDriver
+        //
+        Increment iToken
+        Move gtDFSTokens[iToken].sImage  to sToken
+        Move gtDFSTokens[iToken].iSymbol to iSymbol
+        Get GetScriptValue iSymbol sToken (&iToken) to iTableNum
+        // Read Driver
+        If (iMode=DFC_STRUCTURE_START) Begin
+            Increment iToken
+            Move gtDFSTokens[iToken].sImage  to sToken
+            Move gtDFSTokens[iToken].iSymbol to iSymbol
+            Get GetScriptValue iSymbol sToken (&iToken) to sDriver
+        End
+        // Read Options (Callback is not supported)
+        If (iMode=DFC_STRUCTURE_END) Begin
+            Increment iToken
+            Move gtDFSTokens[iToken].sImage  to sToken
+            Move gtDFSTokens[iToken].iSymbol to iSymbol
+            Get GetScriptValue iSymbol sToken (&iToken) to iOptions
+        End
+        // Execute commands
+        If (pbAllowDFScriptRestructure(Self))  Begin
+            If (iMode=DFC_STRUCTURE_START)  Structure_Start iTableNum sDriver
+            If (iMode=DFC_STRUCTURE_END)    Structure_End   iTableNum iOptions
+            If (iMode=DFC_STRUCTURE_ABORT)  Structure_Abort iTableNum
+        End
+        //
         Function_Return iToken
     End_Function
     //
@@ -2802,22 +2887,6 @@ Class cDFScriptor is a cDFScriptorBuilder
             Set Var_Value sVar (&iToken) to iFor
             Get Process_Block iStart iStopToken to iToken
         Loop
-        Function_Return iToken
-    End_Function
-    //
-    // Increment/Decrement Statement
-    // INCREMENT|DECREMENT (Value)
-    Function IncDec_Statement Integer iMode Integer iToken Returns Integer
-        String  sToken sValue
-        Integer iSymbol iValue iStart
-        Increment iToken
-        Move gtDFSTokens[iToken].sImage   to sToken
-        Move gtDFSTokens[iToken].iSymbol  to iSymbol
-        Get GetScriptValue iSymbol sToken (&iToken) to iValue //sValue
-        If (iMode=DFC_INCREMENT)          Increment iValue
-        If (iMode=DFC_DECREMENT)          Decrement iValue
-        If (iSymbol=DFT_ID)               Set Var_Value      sToken (&iToken) to iValue
-        If (iSymbol=DFT_FILEFIELD)        Send SetFieldValue sToken (&iToken)    iValue
         Function_Return iToken
     End_Function
     //
@@ -2981,6 +3050,9 @@ Class cDFScriptor is a cDFScriptorBuilder
         If (iSymbol=DFC_FIND)                   Get Find_Statement               iToken to iToken
         If (iSymbol=DFC_BEGIN_TRANSACTION)      Get DBTrans_Statement    iSymbol iToken to iToken
         If (iSymbol=DFC_END_TRANSACTION)        Get DBTrans_Statement    iSymbol iToken to iToken
+        If (iSymbol=DFC_STRUCTURE_START)        Get DBStruct_Statement   iSymbol iToken to iToken
+        If (iSymbol=DFC_STRUCTURE_END)          Get DBStruct_Statement   iSymbol iToken to iToken
+        If (iSymbol=DFC_STRUCTURE_ABORT)        Get DBStruct_Statement   iSymbol iToken to iToken
         //
         If (iSymbol=DFC_IF)                     Get IfElse_Statement     iSymbol iToken to iToken
         If (iSymbol=DFC_IFNOT)                  Get IfElse_Statement     iSymbol iToken to iToken

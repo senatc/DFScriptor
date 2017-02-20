@@ -231,9 +231,12 @@ Enum_List
         Define DFC_RELATE           // *
         Define DFC_ATTACH           // *
     Define DFC_DB$STOP
-    Define DFC_FIND             // *
-    Define DFC_BEGIN_TRANSACTION
-    Define DFC_END_TRANSACTION
+    Define DFC_FIND                 // *
+    Define DFC_BEGIN_TRANSACTION    // *
+    Define DFC_END_TRANSACTION      // *
+    Define DFC_STRUCTURE_START      // *
+    Define DFC_STRUCTURE_END        // *
+    Define DFC_STRUCTURE_ABORT      // *
     // IO commands
     Define DFC_IO$START
         Define DFC_SHOW             // *
@@ -651,8 +654,11 @@ Procedure dfsStaticLoadSymbols
     Send dfsAddStaticSymbol DFC_RELATE        "Command"   "DataFlex RELATE Command"  
     Send dfsAddStaticSymbol DFC_ATTACH        "Command"   "DataFlex ATTACH Command"    
     Send dfsAddStaticSymbol DFC_FIND          "Command"   "DataFlex FIND Command"
-    Send dfsAddStaticSymbol DFC_BEGIN_TRANSACTION "Command"   "DataFlex BEGIN_TRANSACTION Command"
-    Send dfsAddStaticSymbol DFC_END_TRANSACTION   "Command"   "DataFlex END_TRANSACTION Command"
+    Send dfsAddStaticSymbol DFC_BEGIN_TRANSACTION "Command" "DataFlex BEGIN_TRANSACTION Command"
+    Send dfsAddStaticSymbol DFC_END_TRANSACTION   "Command" "DataFlex END_TRANSACTION Command"
+    Send dfsAddStaticSymbol DFC_STRUCTURE_START   "Command" "DataFlex DFC_STRUCTURE_START Command"
+    Send dfsAddStaticSymbol DFC_STRUCTURE_END     "Command" "DataFlex DFC_STRUCTURE_END Command"
+    Send dfsAddStaticSymbol DFC_STRUCTURE_ABORT   "Command" "DataFlex DFC_STRUCTURE_ABORT Command"
     Send dfsAddStaticSymbol DFC_SHOW          "Command"   "DataFlex SHOW Command"
     Send dfsAddStaticSymbol DFC_SHOWLN        "Command"   "DataFlex SHOWLN Command"  
     Send dfsAddStaticSymbol DFC_WRITE         "Command"   "DataFlex WRITE Command" 
