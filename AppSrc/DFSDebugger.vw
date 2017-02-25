@@ -33,9 +33,8 @@ Activate_View Activate_oDFSDebugger for oDFSDebugger
 Object oDFSDebugger is a dbView
     //
     Set Label to "DataFlex Script Debugger"
-    Set Size to 380 560
+    Set Size to 335 545
     Set Location to 5 7
-    Set piMinSize to 380 560
     Set DEO_Delegate_Mode to Delegate_Always
     Set Maximize_Icon to True
     Set Bitmap_Style to Bitmap_Stretch
@@ -48,13 +47,14 @@ Object oDFSDebugger is a dbView
     On_Key Key_F5         Send mScriptRun
 
     Set Icon to "Scriptor16.ico"
+    Set piMinSize to 335 545
 
     Object oDFScriptor is a cDFScriptor
     End_Object
     
     Object oScriptDebuggerDialog is a TabDialog
-        Set Size to 381 561
-        Set Location to -2 -2
+        Set Size to 336 546
+        Set Location to -2 -3
         Set Rotate_Mode to RM_Rotate
         Set peAnchors to anAll
         Set pbFlatSeparators to True
@@ -66,26 +66,26 @@ Object oDFSDebugger is a dbView
             Set Label to 'Script'
 
             Object oSplitterContainer3 is a cSplitterContainer
-                Set piSplitterLocation to 399
+                Set piSplitterLocation to 386
                 Set peFixedPanel to fpFixLastPanel
                 Set piMaxSplitterLocation to 50
                 Set piMinSplitterLocation to 50
                 Object oSplitterContainerChild5 is a cSplitterContainerChild
                     Object oContainer3d1 is a Container3d
-                        Set Size to 365 398
+                        Set Size to 320 383
                         Set Location to 0 0
                         Set peAnchors to anAll
                         Set Border_Style to Border_None
 
                         Object oSplitterContainer5 is a cSplitterContainer
                             Set pbSplitVertical to False
-                            Set piSplitterLocation to 292
+                            Set piSplitterLocation to 247
                             Set peFixedPanel to fpFixLastPanel
                             Object oSplitterContainerChild9 is a cSplitterContainerChild
                                 Set Border_Style to Border_None
                                 Object oSourceEditor is a cSourceEditor
-                                    Set Size to 293 399
-                                    Set Location to -1 -1
+                                    Set Size to 248 383
+                                    Set Location to -1 1
                                     Set peAnchors to anAll
                                     Procedure onModifiedChange Integer bModified
                                         String sFileTitle sModified
@@ -123,13 +123,14 @@ Object oDFSDebugger is a dbView
                                         Function_Return 0
                                     End_Function
                                 End_Object
+
                             End_Object
 
                             Object oSplitterContainerChild10 is a cSplitterContainerChild
                                 Set Border_Style to Border_None
                                 Object oCompilerInfo is a TreeView
-                                    Set Size to 62 399
-                                    Set Location to 11 -1
+                                    Set Size to 60 385
+                                    Set Location to 12 -1
                                     Set peAnchors to anAll
                     
                                     Object oImageList is a cImageList32
@@ -207,7 +208,7 @@ Object oDFSDebugger is a dbView
 
                                 Object oOutputHeader is a TextBox
                                     Set Auto_Size_State to False
-                                    Set Size to 10 398
+                                    Set Size to 11 385
                                     Set Location to 1 0
                                     Set Label to "  Output"
                                     Set peAnchors to anTopLeftRight
@@ -222,19 +223,19 @@ Object oDFSDebugger is a dbView
                 Object oSplitterContainerChild6 is a cSplitterContainerChild
                     Set Border_Style to Border_None
                     Object oContainer3d1 is a Container3d
-                        Set Size to 365 154
+                        Set Size to 320 154
                         Set Location to 0 0
                         Set peAnchors to anAll
                         Set Border_Style to Border_None
 
                         Object oSplitterContainer4 is a cSplitterContainer
                             Set pbSplitVertical to False
-                            Set piSplitterLocation to 150
+                            Set piSplitterLocation to 105
                             Set peFixedPanel to fpFixLastPanel
                             Object oSplitterContainerChild7 is a cSplitterContainerChild
                                 Set Border_Style to Border_None
                                 Object oParserTree is a cDebuggerTreeView //TreeView
-                                    Set Size to 141 154
+                                    Set Size to 95 155
                                     Set Location to 11 0
                                     Set peAnchors to anAll
                                     Set pbEnableInfoTips to True
@@ -320,7 +321,7 @@ Object oDFSDebugger is a dbView
                     
                                 Object oScriptHeader is a TextBox
                                     Set Auto_Size_State to False
-                                    Set Size to 10 178
+                                    Set Size to 11 160
                                     Set Location to 1 0
                                     Set Label to "  Script"
                                     Set peAnchors to anTopLeftRight
@@ -354,7 +355,7 @@ Object oDFSDebugger is a dbView
                                         Set piImageIndex to 0
                                         Set Label to 'Objects'
                                         Object oObjectTree is a cDebuggerTreeView //TreeView
-                                            Set Size to 214 180
+                                            Set Size to 190 180
                                             Set Location to 0 0
                                             Set peAnchors to anAll
                                             Set pbEnableInfoTips to True
@@ -446,7 +447,7 @@ Object oDFSDebugger is a dbView
                                         Set Label to 'Database'
                                 
                                         Object oTablesTree is a cDebuggerTreeView
-                                            Set Size to 214 180
+                                            Set Size to 190 180
                                             Set Location to 0 0
                                             Set peAnchors to anAll
                                             Set pbEnableInfoTips to True
@@ -660,11 +661,11 @@ Object oDFSDebugger is a dbView
             Set Label to "Scopes"
 
             Object oSplitterContainer1 is a cSplitterContainer
-                Set piSplitterLocation to 143
+                Set piSplitterLocation to 130
                 Object oSplitterContainerChild1 is a cSplitterContainerChild
                     Object oScopesHeader is a TextBox
                         Set Auto_Size_State to False
-                        Set Size to 10 178
+                        Set Size to 10 305
                         Set Location to 0 0
                         Set Label to "  Scopes"
                         Set peAnchors to anTopLeftRight
@@ -673,7 +674,7 @@ Object oDFSDebugger is a dbView
                     End_Object
 
                     Object oScopes is a cDebuggerTreeView
-                        Set Size to 356 143
+                        Set Size to 311 270
                         Set Location to 10 -1
                         Set peAnchors to anAll
                         
@@ -748,7 +749,7 @@ Object oDFSDebugger is a dbView
 
                     Object oScopesHeader is a TextBox
                         Set Auto_Size_State to False
-                        Set Size to 10 411
+                        Set Size to 10 410
                         Set Location to 0 0
                         Set Label to "  Scope Tokens"
                         Set peAnchors to anTopLeftRight
@@ -757,7 +758,7 @@ Object oDFSDebugger is a dbView
                     End_Object
 
                     Object oScope is a cWinListView
-                        Set Size to 261 411
+                        Set Size to 215 410
                         Set Location to 10 0
                         Set peAnchors to anAll
                         Procedure Clear
@@ -807,8 +808,8 @@ Object oDFSDebugger is a dbView
         
                     Object oVariablesHeader is a TextBox
                         Set Auto_Size_State to False
-                        Set Size to 10 411
-                        Set Location to 270 0
+                        Set Size to 10 409
+                        Set Location to 225 0
                         Set Label to "  Local Variables"
                         Set peAnchors to anBottomLeftRight
                         Set Color to clBtnShadow
@@ -816,8 +817,8 @@ Object oDFSDebugger is a dbView
                     End_Object
 
                     Object oScopeVariables is a cWinListView
-                        Set Size to 86 411
-                        Set Location to 279 0
+                        Set Size to 85 410
+                        Set Location to 234 0
                         Set peAnchors to anBottomLeftRight
                         Procedure Clear
                             Send DoDeleteAllItems
@@ -897,7 +898,7 @@ Object oDFSDebugger is a dbView
             Set Label to "Variables"
 
             Object oVariables is a cWinListView
-                Set Size to 366 556
+                Set Size to 321 541
                 Set Location to 1 1
                 Set peAnchors to anAll
                 Procedure Clear
@@ -963,7 +964,7 @@ Object oDFSDebugger is a dbView
             Set Label to "Tokens"
 
             Object oTokens is a cWinListView
-                Set Size to 366 556
+                Set Size to 321 541
                 Set Location to 1 1
                 Set peAnchors to anAll
                 Procedure Clear
@@ -1019,7 +1020,7 @@ Object oDFSDebugger is a dbView
             Set Label to "Errors"
 
             Object oErrors is a cWinListView
-                Set Size to 366 556
+                Set Size to 321 541
                 Set Location to 1 1
                 Set peAnchors to anAll
                 Object oImageList is a cImageList32
@@ -1082,7 +1083,7 @@ Object oDFSDebugger is a dbView
             Set Label to "Symbols"
             
             Object oSymbols is a cWinListView
-                Set Size to 366 556
+                Set Size to 321 541
                 Set Location to 1 1
                 Set peAnchors to anAll
                 Procedure Clear
@@ -1122,7 +1123,7 @@ Object oDFSDebugger is a dbView
             Set Label to "Charsets"
 
             Object oCharsets is a cWinListView
-                Set Size to 366 556
+                Set Size to 321 541
                 Set Location to 1 1
                 Set peAnchors to anAll
                 Procedure Clear
@@ -1157,6 +1158,7 @@ Object oDFSDebugger is a dbView
         Object oTP_Console is a cDebuggerPage
             Set Label to "Console"
             Object oConsole is a cConsoleTerminal
+                Set Size to 345 566
             End_Object // Console terminal
         End_Object // Console tab page
 

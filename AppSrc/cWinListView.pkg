@@ -936,6 +936,7 @@ Class cBaseListView Is A cWinControl
     
 End_Class
 
+{ DesignerClass=cDTTreeView }
 Class cWinListView Is A cBaseListView
     Procedure Construct_Object
         Forward Send Construct_Object

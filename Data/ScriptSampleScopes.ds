@@ -14,7 +14,19 @@ End_Object
 Object oMyArray2 Is an Array
 End_Object
 
+// Classes should not be created here
+// (Below lines will generate Compile error)
+//Class cMyArray Is an Array
+//End_Class
+
+// Objects can not be nested or augmented (See script strucutre pane)
 Object oMyArray3 Is an Array
+    Object oMyArray4 Is an Array
+        Object oMyArray5 Is an Array
+        End_Object
+    End_Object
+    Procedure Test
+    End_Procedure
 End_Object
 
 // Object Info

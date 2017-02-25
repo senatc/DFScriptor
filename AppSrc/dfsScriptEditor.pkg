@@ -7,7 +7,7 @@ CMDeclareCommand CMD_CompileCurrent             4 "BuildCompile"            "Com
 CMDeclareCommand CMD_BuildRun                   5 "BuildRun"                "Builds the script (.DE)"
 CMDeclareCommand CMD_BuildExecute               6 "BuildExecute"            "Runs script"
 //
-//Integer giHK
+{ DesignerClass=cDTEdit }
 Class cSourceEditor is a cCodeMaxEdit
     Procedure onRegisteredCmd Integer iCmd
         if iCmd eq CMD_FileNewFile              send mScriptNew
@@ -19,10 +19,6 @@ Class cSourceEditor is a cCodeMaxEdit
     End_Procedure
     Procedure onPropsChange
         // Pickup editor Properties eg. Move (CMGetHotkeys()) To sHotKeys etc.
-//Increment giHK
-//Direct_Output ("HK"+String(giHK))
-//Write (CMGetHotkeys())
-//Close_Output
     End_Procedure
     Function CanCut Returns Integer
         Function_Return (CM_CanCut(Self))
