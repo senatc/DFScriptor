@@ -336,6 +336,8 @@ Class cDFScriptorBase is a cObject
                 Function_Return DFC_LOCAL
             Case (sImage="GLOBAL_VARIABLE")
                 Function_Return DFC_GLOBAL_VARIABLE
+            Case (sImage="CMDLINE")
+                Function_Return DFC_CMDLINE
             Case (sImage="SLEEP")
                 Function_Return DFC_SLEEP
             Case (sImage="ABORT")
@@ -1571,13 +1573,17 @@ Class cDFScriptorBuilder is a cDFScriptorBase
                         Get Command_ID ltLineTokens[iItem].sImage to iCommand
                         Move iItem to iBaseToken
                     End
-                    Move iCommand to ltLineTokens[iItem].iSymbol
-                    Set piCommandsCount to (piCommandsCount(Self)+1)
-                    If (iCommand=DFC_USE) Move 1 to iNoiseLine
-                    If ((iCommand>=DFC_STRING)and(iCommand<=DFC_DEFINE)) Move 1 to iNoiseLine
-                    If ((iCommand=DFC_END_FUNCTION)or(iCommand=DFC_END_PROCEDURE)) Move 1 to iNoiseLine
-                    If ((iCommand=DFC_END_OBJECT)or(iCommand=DFC_END_CLASS)) Move 1 to iNoiseLine
-                    If (iCommand=DFC_OPEN) Move 0 to iNoiseLine
+                    Move iCommand             to ltLineTokens[iItem].iSymbol
+                    Set  piCommandsCount      to (piCommandsCount(Self)+1)
+                    If (iCommand=DFC_USE)                                           Move 1 to iNoiseLine
+                    If (iCommand=DFC_CMDLINE) Begin
+                        Increment gtDFSScopes[0].iNumArguments
+                        Move 1 to iNoiseLine
+                    End
+                    If ((iCommand>=DFC_STRING)and(iCommand<=DFC_DEFINE))            Move 1 to iNoiseLine
+                    If ((iCommand=DFC_END_FUNCTION)or(iCommand=DFC_END_PROCEDURE))  Move 1 to iNoiseLine
+                    If ((iCommand=DFC_END_OBJECT)or(iCommand=DFC_END_CLASS))        Move 1 to iNoiseLine
+                    If (iCommand=DFC_OPEN)                                          Move 0 to iNoiseLine
                 End
                 Else Send Add_Error_Info 4298 ltLineTokens[iItem].iLine 0 ("Command not found"*ltLineTokens[iItem].sImage) ltLineTokens[iItem].sFile
                 // Scope control
@@ -2254,7 +2260,11 @@ Class cDFScriptor is a cDFScriptorBuilder
         String sValue
         If ((iSymbol>=DFT_STRING)and(iSymbol<=DFT_INTEGER)) Move sToken to sValue
         If (iSymbol=DFT_FILEFIELD) Get GetFieldValue sToken (&iToken) to sValue
-        If (iSymbol=DFT_ID)        Get Var_Value     sToken (&iToken) to sValue
+        If (iSymbol=DFT_ID)        Begin
+            If (Left(sToken, 1)="|") ;
+                Get Var_Value sToken (&iToken) to sValue
+            Else Move (Eval(sToken)) to sValue
+        End
         If (iSymbol=DFT_EXPSTART)  Get Process_Expression   (&iToken) to sValue
         Function_Return sValue
     End_Function
@@ -2544,7 +2554,7 @@ Class cDFScriptor is a cDFScriptorBuilder
             Move gtDFSTokens[iToken].iSymbol to iSymbol
             // Skip ITEM|FIELD|FILE_FIELD
             If ((iSymbol>=DFW_ITEM)and(iSymbol<=DFW_FILE_FIELD)) Begin
-                // Got ot the next token
+                // Got to the next token
                 Increment iToken // Value
                 Move gtDFSTokens[iToken].sImage  to sToken
                 Move gtDFSTokens[iToken].iSymbol to iSymbol
@@ -2952,7 +2962,7 @@ Class cDFScriptor is a cDFScriptorBuilder
         Function_Return iToken
     End_Function
     //
-    Function Process_Else Integer iToken Returns Integer
+    Function Process_Else Integer iToken Integer iTokens Returns Integer
         Integer iSymbol iStopToken
         String  sToken
         Increment iToken
@@ -2969,21 +2979,23 @@ Class cDFScriptor is a cDFScriptorBuilder
             If (gtDFSTokens[iToken-1].iSymbol=DFC_BEGIN) ;
                 Move (Right(sToken, Length(sToken)-Pos("$", sToken))+1) to iToken
         End
-        If (gtDFSTokens[iToken+1].iSymbol=DFC_ELSE) Begin
-            Increment iToken // ELSE
-            Increment iToken // Command|Begin
-            Move gtDFSTokens[iToken].iSymbol  to iSymbol
-            If (iSymbol=DFF_IF) Move DFC_IF to iSymbol
-            // Coomand|Begin
-            If (iSymbol<>DFC_BEGIN) Get Exec_Command iSymbol iToken to iToken
-            Else Begin
-                Move gtDFSTokens[iToken].sImage   to sToken
-                Move (Right(sToken, Length(sToken)-Pos("$", sToken))) to iStopToken
-                Get Process_Block iToken iStopToken to iToken
-                // DFC_END
-                Increment iToken
-                // <EOL>
-                Increment iToken
+        If ((iToken+1)<iTokens) Begin
+            If (gtDFSTokens[iToken+1].iSymbol=DFC_ELSE) Begin
+                Increment iToken // ELSE
+                Increment iToken // Command|Begin
+                Move gtDFSTokens[iToken].iSymbol  to iSymbol
+                If (iSymbol=DFF_IF) Move DFC_IF to iSymbol
+                // Coomand|Begin
+                If (iSymbol<>DFC_BEGIN) Get Exec_Command iSymbol iToken to iToken
+                Else Begin
+                    Move gtDFSTokens[iToken].sImage   to sToken
+                    Move (Right(sToken, Length(sToken)-Pos("$", sToken))) to iStopToken
+                    Get Process_Block iToken iStopToken to iToken
+                    // DFC_END
+                    Increment iToken
+                    // <EOL>
+                    Increment iToken
+                End
             End
         End
         Function_Return iToken
@@ -2994,7 +3006,8 @@ Class cDFScriptor is a cDFScriptorBuilder
     // ELSE Command|Begin
     Function IfElse_Statement Integer iMode Integer iToken Returns Integer
         String  sToken sValue
-        Integer iSymbol iValue iStopToken
+        Integer iSymbol iValue iStopToken iTokens
+        Move (SizeOfArray(gtDFSTokens)) to iTokens
         // Calc Expression
         Increment iToken // Value
         Move gtDFSTokens[iToken].sImage             to sToken
@@ -3012,7 +3025,8 @@ Class cDFScriptor is a cDFScriptorBuilder
                 // <EOL>
                 Increment iToken
                 // ELSE?
-                If (gtDFSTokens[iToken+1].iSymbol=DFC_ELSE) Increment iToken
+                If (iToken<iTokens) ;
+                    If (gtDFSTokens[iToken+1].iSymbol=DFC_ELSE) Increment iToken
             End
             Else Begin
                 Move gtDFSTokens[iToken].sImage   to sToken
@@ -3024,11 +3038,13 @@ Class cDFScriptor is a cDFScriptorBuilder
                 Increment iToken
             End
             // Else Command
-            If (gtDFSTokens[iToken].iSymbol=DFC_ELSE) ;
-                Get Process_Else iToken to iToken
-            Else Decrement iToken // Go back as no Else command found
+            If (iToken<iTokens) Begin
+                If (gtDFSTokens[iToken].iSymbol=DFC_ELSE) ;
+                    Get Process_Else iToken iTokens to iToken
+                Else Decrement iToken // Go back as no Else command found
+            End
         End
-        Else    Get Process_Else iToken to iToken
+        Else Get Process_Else iToken iTokens to iToken
         //
         Function_Return iToken
     End_Function
@@ -3103,9 +3119,9 @@ Class cDFScriptor is a cDFScriptorBuilder
         Send Clear_Script
         Move iScope to DFS$CURRENT$SCOPE
         //
-        // Process parameters
+        // Process parameters (For the Main Script Use CmdLine command)
         Move (SizeOfArray(sScriptParameters)) to iParameters
-        If (iNumArguments<iParameters) Begin
+        If (iNumArguments>iParameters) Begin
             Showln "Required script argument missed"
             Function_Return 1
         End

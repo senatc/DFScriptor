@@ -1,0 +1,79 @@
+// Sample DF Script (Menu)
+// (C) 2017, Just for Fun, by Sergey V. Natarov
+// This sample will generate Menu Item dynamically using DataFlex Scriptor
+//
+
+// This should be passed parameters
+//     hDemo1Menu - Object handle to the Script based Menu Item
+//     hCommandBarControls - Object handle to Command Bar Controls component
+Handle  hDemo1Menu hCommandBarControls
+CmdLine hDemo1Menu
+CmdLine hCommandBarControls
+// Stop Script Execution if not passed
+If ((hDemo1Menu=0)Or(hCommandBarControls=0)) Procedure_Return
+
+// Menu Actions
+Procedure mMenuActionCut
+    If (CanCut(Focus(Self)))    Send Cut Of (Focus(Self))
+End_Procedure
+Procedure mMenuActionCopy
+    If (CanCopy(Focus(Self)))   Send Copy Of (Focus(Self))
+End_Procedure
+Procedure mMenuActionPaste
+    If (CanPaste(Focus(Self)))  Send Paste Of (Focus(Self))
+End_Procedure
+Procedure mMenuActionUndo
+    If (CanUndo(Focus(Self)))   Send Undo Of (Focus(Self))
+End_Procedure
+Procedure mMenuActionDelete
+    If (CanDelete(Focus(Self))) Send Delete Of (Focus(Self))
+End_Procedure
+
+// Define Script Variables
+Handle  ghoItems hChildItem
+Integer iChildItem
+
+// Check Items Repository
+Get phoChildItems Of hDemo1Menu To ghoItems
+
+Procedure mCreateMenuItem String sCaption String sToolTip String sDesc String sIcon String sShortCut String sCat String sAction Integer iEnabled
+    Handle  hItem
+    Integer iItem
+    Get Item_Count        Of ghoItems    To iItem
+    Get Create            Of hDemo1Menu  U_cCJDFSChildItem  To hItem
+    Set Value             Of ghoItems    iItem              To hItem
+    Set psCaption         Of hItem       To sCaption
+    Set psToolTip         Of hItem       To sToolTip
+    Set psDescription     Of hItem       To sDesc
+    Set psImage           Of hItem       To sIcon
+    Set psShortcut        Of hItem       To sShortCut
+    Set psCategory        Of hItem       To sCat
+    Set psScriptScope     Of hItem       To sAction
+    Set pbEnabled         Of hItem       To iEnabled
+    Send AddScriptControl Of hDemo1Menu  hItem hCommandBarControls
+End_Procedure
+
+// If does not exist, generate Repository
+If (ghoItems=0) Begin
+    // Create Repository
+    Get Create Of hDemo1Menu U_Array To ghoItems
+    Set phoChildItems Of hDemo1Menu To ghoItems
+End
+Else Send DestroyChildItems To ghoItems
+
+// Populate with Menu Items 
+Send mCreateMenuItem "&Undo"   "Undo"       "Undo last action" ;
+                     "actionUndo.ico"       "Ctrl+Z"  "Edit"  ;
+                     "Msg_mMenuActionUndo"  (CanUndo(Focus(Self)))
+Send mCreateMenuItem "Cu&t"    "Cut"        "Cuts the selection and puts it on the Clipboard" ;
+                     "actionCut.ico"        "Ctrl+X"  "Edit" ;
+                     "Msg_mMenuActionCut"   (CanCut(Focus(Self)))
+Send mCreateMenuItem "&Copy"   "Copy"       "Copies the selection and puts it on the Clipboard" ;
+                     "actionCopy.ico"       "Ctrl+C"  "Edit"  ;
+                     "Msg_mMenuActionCopy"  (CanCopy(Focus(Self)))
+Send mCreateMenuItem "&Paste"  "Paste"      "Inserts Clipboard contents" ;
+                     "actionPaste.ico"      "Ctrl+V"  "Edit"  ;
+                     "Msg_mMenuActionPaste" (CanPaste(Focus(Self)))
+Send mCreateMenuItem "&Delete" "Delete"     "Delete Selected text" ;
+                     "actionDelete.ico"     "Delete"  "Edit"  ;
+                     "Msg_mMenuActionDelete"  (CanDelete(Focus(Self)))

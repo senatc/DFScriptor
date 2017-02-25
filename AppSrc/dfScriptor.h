@@ -259,6 +259,7 @@ Enum_List
     Define DFC_ERROR                // *
     Define DFC_SCRIPT_RETURN        // *
     Define DFC_ABORT                // *
+    Define DFC_CMDLINE              // *
     Define DFC_SLEEP                // *
     // Directives
     Define DFD_IF
@@ -676,6 +677,7 @@ Procedure dfsStaticLoadSymbols
     Send dfsAddStaticSymbol DFC_ERROR         "Command"   "DataFlex ERROR Command"
     Send dfsAddStaticSymbol DFC_SCRIPT_RETURN "Command"   "DFScriptor SCRIPT_RETURN Command"
     Send dfsAddStaticSymbol DFC_ABORT         "Command"   "DFScriptor ABORT Command"
+    Send dfsAddStaticSymbol DFC_CMDLINE       "Command"   "DataFlex CMDLINE Command"
     Send dfsAddStaticSymbol DFC_SLEEP         "Command"   "DataFlex SLEEP Command"
     //
     Send dfsAddStaticSymbol DFD_IF            "Directive" "Compiler #IF Directive"

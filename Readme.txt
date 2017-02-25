@@ -32,6 +32,7 @@ What's New
    2.14. ADD/SUBTRACT commands were implemented.
    2.15. INDICATE command implemented for the pre-defined indicators FOUND|SEQEOF|SEQEOL|ERR
    2.16. IF/ELSE commands improved to support blocks, cascade IF/ELSE and constructions like "ELSE IF"
+   2.17. CMDLINE command added to allow pass parameters into the Main Script.
 
 3. Samples
 
@@ -100,7 +101,7 @@ SHOW | SHOWLN | WRITE | WRITELN | WRITE_HEX | READ | READLN | READ_BLOCK | READ_
 DIRECT_OUTPUT | DIRECT_INPUT | APPEND_OUTPUT | CLOSE_INPUT | CLOSE_OUTPUT 
 
 General Purposes:
-USE | ERROR | ABORT (Windows only, Confirmation provided) | SLEEP 
+USE | ERROR | ABORT (Windows only, Confirmation provided) | SLEEP | CMDLINE
 
 
 Directives

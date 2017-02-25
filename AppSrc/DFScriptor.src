@@ -15,6 +15,69 @@ End_Object
 Use oEditContextMenu.pkg
 Use oDEOEditContextMenu17.pkg
 
+
+// *************
+Use dfScriptor.pkg
+Class cCJDFSChildItem is a cCJMenuItem
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Property String psScriptScope
+    End_Procedure
+    Procedure OnExecute Variant vCommandBarControl
+        Delegate Send mExecMenuItem (psScriptScope(Self))
+    End_Procedure
+End_Class                
+Class cCJDFSMenuItems is a cCJMenuItem
+    
+    Procedure Construct_Object
+        Forward Send Construct_Object
+        Property String psMenuScriptSource
+        Property Handle phoChildItems
+        Set peControlType to xtpControlPopup
+        Object oDFScriptor is a cDFScriptor
+            // Do not generate Intermediate Compile files
+            Set piGeneratePRN to False
+        End_Object
+    End_Procedure
+    
+    Procedure mExecMenuItem String sScope
+        Send DFS_Exec to (oDFScriptor(Self)) sScope
+    End_Procedure
+    
+    Procedure DestroyChildItems
+        Integer hoItems iItem iItems
+        Get phoChildItems to hoItems
+        Get Item_Count of hoItems to iItems
+        For iItem from 0 to (iItems-1)
+            Send Destroy to (Value(hoItems, iItem))
+        Loop
+        Send Delete_Data to hoItems
+    End_Procedure
+    
+    Procedure AddScriptControl Handle hItem Handle hCommandBarControls
+        Variant vItem
+        Get AddDynamicControl of hItem hCommandBarControls to vItem
+    End_Procedure
+    
+    Procedure OnPopupInit Variant vCommandBarControl Handle hCommandBarControls
+        String[] sScriptParameters
+        //
+        If (psScriptSource(oDFScriptor(Self))="") Begin
+            Set psScriptSource      of (oDFScriptor(Self)) to (psMenuScriptSource(Self))
+            Send Compile            to (oDFScriptor(Self))
+        End
+        // Run Menu Script
+        // DFS/hDemo1Menu
+        Move (Object_Id(Self))      to sScriptParameters[0]
+        // DFS/hCommandBarControls
+        Move hCommandBarControls    to sScriptParameters[1]
+        Set psScriptParameters      of (oDFScriptor(Self)) to sScriptParameters
+        Send DFS_Exec               to (oDFScriptor(Self)) ""
+    End_Procedure
+     
+End_Class
+// *************
+
 Object oMain is a Panel
     Set Label to "DataFlex Scriptor"
     Set Location to 7 2
@@ -89,17 +152,6 @@ Object oMain is a Panel
                 End_Object
     
             End_Object
-            
-            Procedure OnCreate
-//                Handle hMenuItem hTitle
-//                Get CreateNamed U_cCJMenuItem "oTestItem" to hTitle
-//                Set peControlType   of hTitle to xtpControlPopup
-//                Set psCaption       of hTitle to "&Test Caption"
-//                Set psDescription   of hTitle to "Test menu description"
-//                Set psCategory      of hTitle to "Category"
-//                //
-//                Get CreateNamed of hTitle U_cCJExitMenuItem "oPopupItem" to hMenuItem
-            End_Procedure
             
             Object oScriptorMenu is a cCJMenuItem
                 Set peControlType to xtpControlPopup          
@@ -215,6 +267,14 @@ Object oMain is a Panel
                     Set pbControlBeginGroup to True
                 End_Object
 
+            End_Object
+
+            Object oScriptorDemo1Menu is a cCJDFSMenuItems
+                Set peControlType       to xtpControlPopup          
+                Set psCaption           to "&Demo1"
+                Set psDescription       to "DataFlex Scriptor Menu 1 Demo"
+                Set psCategory          to "DynMenu1"
+                Set psMenuScriptSource  to "ScriptSampleMenu.ds"
             End_Object
 
             Object oViewMenu is a cCJMenuItem

@@ -9,7 +9,7 @@
 // ***  General Attributes  ***
 // ****************************
 Integer iDriver iNumDrivers
-String  sCurrentDriver sName sDriver
+String  sCurrentDriver sDriver
 Get_Attribute DF_NUMBER_DRIVERS To iNumDrivers
 Showln "Available Drivers:"
 Showln "----------------------------------------------"
@@ -35,11 +35,13 @@ Handle hTable
 Integer iNumColumns iLastIndex iNumSegments
 Integer iColumn iType iLength iPrecision iIndex iSegment
 String sRoot sDisplay sTable sColumn sType sLength
+
 Open Customer
 Move Customer.File_Number To hTable
 Showln
 Showln "Customer [" Customer.File_Number "]:"
 Showln "----------------------------------------------"
+
 // Names
 Get_Attribute DF_FILE_ROOT_NAME     Of hTable To sRoot
 Get_Attribute DF_FILE_DISPLAY_NAME  Of hTable To sDisplay
@@ -49,6 +51,7 @@ Showln "Root="      sRoot
 Showln "Display="   sDisplay
 Showln "Logical="   sTable
 Showln "Driver="    sDriver
+
 // Fields
 Get_Attribute DF_FILE_NUMBER_FIELDS Of hTable To iNumColumns
 Showln
@@ -71,6 +74,7 @@ For iColumn From 1 To iNumColumns
     End
     Showln (Right(" " + String(iColumn), 2)) ": " sColumn " " sType " " sLength
 Loop // Columns
+
 // Indexes
 Get_Attribute DF_FILE_LAST_INDEX_NUMBER Of hTable To iLastIndex
 Showln

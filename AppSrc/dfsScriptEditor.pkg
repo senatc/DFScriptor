@@ -90,7 +90,7 @@ Class cSourceEditor is a cCodeMaxEdit
         Move (sKW+"Sysdate4\nSysdate\nZeroString\nGetAddress\nIfnot\nGet_File_Path\n")          to sKw
         Move (sKW+"Set_Channel_Position\nGet_Channel_Position\nGet_Argument_Size\n#REM\n")      to sKw
         Move (sKW+"Set_Argument_Size\n#SET\n#POP\n#PUSH\n#ERROR\n#SPUSH\n#CHECK\n#SPOP\n")      to sKw
-        Move (sKW+"Add\n#SET\nSubtract\nShow\nAs\nAbort\nSleep\n")                              to sKw
+        Move (sKW+"Add\n#SET\nSubtract\nShow\nAs\nAbort\nCmdLine\nSleep\n")                     to sKw
         Move (sKW+"File_Exist\nPut\nAt\nCalc\nGetBuff\nInsert\nZeroType\nZeroFile\nGetBuff_String") to sKw
         Move (sOp+"+\n-\n=\n*\n/\n<\n>\n<=\n>=\n<>\nOr\nAnd\nIn\nContains\nEq\nNe\nLt\nSeqEol\n")   to sOp
         Move (sOp+"Script_Return\n")   to sOp
