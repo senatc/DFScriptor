@@ -2064,7 +2064,6 @@ Class cDFScriptorBuilder is a cDFScriptorBase
         Set ptsCompileTime to tsTime
         //
         Send Add_Compiler_Info 1 "Summary"
-        Send Add_Compiler_Info 1  "Total Warnings  : 0"
         Send Add_Compiler_Info 1 ("Total Errors    : "+String(piErrorsCount(Self)))
         Send Add_Compiler_Info 1 ("Total Lines     : "+String(piLinesCount(Self)))
         Send Add_Compiler_Info 1 ("Total Tokens    : "+String(piTokensCount(Self)))
@@ -2074,7 +2073,6 @@ Class cDFScriptorBuilder is a cDFScriptorBase
         Send Add_Compiler_Info 1 ("Total Variables : "+String(piVariablesCount(Self)))
         Send Add_Compiler_Info 1 ("Total Objects   : "+String(piObjectsCount(Self)))
         Send Add_Compiler_Info 1 ("Total Methods   : "+String(piMethodsCount(Self)))
-        Send Add_Compiler_Info 1 ("Total Scopes    : "+String(piScopeStartCount(Self)))
         Send Add_Compiler_Info 1 ("Compile Time    : "+(String(DateGetMinute(tsTime))+'m'*String(DateGetSecond(tsTime))+'s'*String(DateGetMillisecond(tsTime))+"ms"))
         //
         If (piErrorsCount(Self)) Send Add_Compiler_Info 4  "---- Compile Finished (With Errors!) ----"
@@ -2082,7 +2080,6 @@ Class cDFScriptorBuilder is a cDFScriptorBase
         //
         If iPRN Begin
             Writeln channel iPRNChannel "Summary: "
-            Writeln channel iPRNChannel "Total Warnings  : 0"
             Writeln channel iPRNChannel "Total Errors    : " (piErrorsCount(Self))
             Writeln channel iPRNChannel "Total Lines     : " (piLinesCount(Self))
             Writeln channel iPRNChannel "Total Tokens    : " (piTokensCount(Self))
@@ -2092,7 +2089,6 @@ Class cDFScriptorBuilder is a cDFScriptorBase
             Writeln channel iPRNChannel "Total Variables : " (piVariablesCount(Self))
             Writeln channel iPRNChannel "Total Objects   : " (piObjectsCount(Self))
             Writeln channel iPRNChannel "Total Methods   : " (piMethodsCount(Self))
-            Writeln channel iPRNChannel "Total Scopes    : " (piScopeStartCount(Self))
             Writeln channel iPRNChannel "Compile Time    : " (String(DateGetMinute(tsTime))+'m'*String(DateGetSecond(tsTime))+'s'*String(DateGetMillisecond(tsTime))+"ms")
             Close_Output channel iPRNChannel 
         End
@@ -2259,6 +2255,7 @@ Class cDFScriptor is a cDFScriptorBuilder
     Function GetScriptValue Integer iSymbol String sToken Integer ByRef iToken Returns String
         String sValue
         If ((iSymbol>=DFT_STRING)and(iSymbol<=DFT_INTEGER)) Move sToken to sValue
+        If ((iSymbol>=DFW_TRUE)and(iSymbol<=DFW_ERR)) Move (Eval(sToken)) to sValue
         If (iSymbol=DFT_FILEFIELD) Get GetFieldValue sToken (&iToken) to sValue
         If (iSymbol=DFT_ID)        Begin
             If (Left(sToken, 1)="|") ;
@@ -2705,7 +2702,7 @@ Class cDFScriptor is a cDFScriptorBuilder
                                            sPar10 sPar11 sPar12 sPar13 sPar14 sPar15 sPar16 sPar17 sPar18 sPar19
             End
         End // iMsg
-        Else If iScope Begin
+        Else If (iScope>=0) Begin
             Move gtDFSTokens                     to ltDFSTokens
             Move ltDFSScopes[iScope].atTokens    to gtDFSTokens
             Set psScriptParameters               to sParameters
@@ -3122,7 +3119,7 @@ Class cDFScriptor is a cDFScriptorBuilder
         // Process parameters (For the Main Script Use CmdLine command)
         Move (SizeOfArray(sScriptParameters)) to iParameters
         If (iNumArguments>iParameters) Begin
-            Showln "Required script argument missed"
+            Error 500 "Required script argument missed"
             Function_Return 1
         End
         Else Move iNumArguments to iParameters

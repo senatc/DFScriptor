@@ -14,11 +14,35 @@ Class cSourceEditor is a cCodeMaxEdit
         if iCmd eq CMD_FileOpenFile             send mScriptOpen
         if iCmd eq CMD_FileSaveFile             send mScriptSave
         if iCmd eq CMD_CompileCurrent           send mScriptCompile
-        if iCmd eq CMD_BuildRun                 send mScriptBuild
-        if iCmd eq CMD_BuildExecute             send mScriptRun
+        If iCmd eq CMD_BuildRun                 Send mScriptBuild
+        //if iCmd eq CMD_BuildExecute             send mScriptRun
     End_Procedure
     Procedure onPropsChange
+        Handle hoWorkspace
+        Get phoWorkspace of ghoApplication to hoWorkspace
         // Pickup editor Properties eg. Move (CMGetHotkeys()) To sHotKeys etc.
+        String  sHotKeys sColors sPath sLanguage sStyles sFont
+        Integer iColors
+        //
+        Move (psProgramPath(hoWorkspace))   to sPath
+        //
+        Get   CM_GetLanguage                to sLanguage
+        Move (CMGetHotkeys())               to sHotKeys
+        Get   CM_GetColors                  to sColors
+        Get   CM_IsColorSyntaxEnabled       to iColors
+        Get   CM_GetFontStyles              to sStyles
+        Get   CM_GetFont                    to sFont
+        //
+        Direct_Output (sPath - "\" - "DFSDebugger.ini")
+        Writeln "[Options]"
+        Writeln "Language="     sLanguage
+        Writeln "HotKeys="      sHotKeys
+        Writeln "ColorSyntax="  iColors
+        Writeln "Colors="       sColors
+        Writeln "Font="         sFont
+        Writeln "FontStyles="   sStyles
+        Close_Output
+        //
     End_Procedure
     Function CanCut Returns Integer
         Function_Return (CM_CanCut(Self))

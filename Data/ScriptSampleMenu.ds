@@ -3,7 +3,8 @@
 // This sample will generate Menu Item dynamically using DataFlex Scriptor
 //
 
-// This should be passed parameters
+// -----  Accept and Process Parameters  -----
+// Required parameters (must be passed from the Application)
 //     hDemo1Menu - Object handle to the Script based Menu Item
 //     hCommandBarControls - Object handle to Command Bar Controls component
 Handle  hDemo1Menu hCommandBarControls
@@ -11,6 +12,7 @@ CmdLine hDemo1Menu
 CmdLine hCommandBarControls
 // Stop Script Execution if not passed
 If ((hDemo1Menu=0)Or(hCommandBarControls=0)) Procedure_Return
+// -----  End of Parameters Section  -----
 
 // Menu Actions
 Procedure mMenuActionCut
@@ -25,6 +27,9 @@ End_Procedure
 Procedure mMenuActionUndo
     If (CanUndo(Focus(Self)))   Send Undo Of (Focus(Self))
 End_Procedure
+Procedure mMenuActionRedo
+    If (CanRedo(Focus(Self)))   Send Redo Of (Focus(Self))
+End_Procedure
 Procedure mMenuActionDelete
     If (CanDelete(Focus(Self))) Send Delete Of (Focus(Self))
 End_Procedure
@@ -36,12 +41,20 @@ Integer iChildItem
 // Check Items Repository
 Get phoChildItems Of hDemo1Menu To ghoItems
 
-Procedure mCreateMenuItem String sCaption String sToolTip String sDesc String sIcon String sShortCut String sCat String sAction Integer iEnabled
+Procedure mCreateMenuItem ;
+    String  sCaption String  sToolTip  String  sDesc  ;
+    String  sIcon    String  sShortCut String  sCat   ;
+    String  sAction  Integer iEnabled  Integer iGroup
     Handle  hItem
     Integer iItem
+    // Generate New Child Item
     Get Item_Count        Of ghoItems    To iItem
-    Get Create            Of hDemo1Menu  U_cCJDFSChildItem  To hItem
-    Set Value             Of ghoItems    iItem              To hItem
+    Get Create            Of hDemo1Menu  ;
+                          U_cCJDFSChildItem ;
+                                         To hItem
+    Set Value             Of ghoItems    ;
+                             iItem       To hItem
+    // Set Child Item Option
     Set psCaption         Of hItem       To sCaption
     Set psToolTip         Of hItem       To sToolTip
     Set psDescription     Of hItem       To sDesc
@@ -50,30 +63,36 @@ Procedure mCreateMenuItem String sCaption String sToolTip String sDesc String sI
     Set psCategory        Of hItem       To sCat
     Set psScriptScope     Of hItem       To sAction
     Set pbEnabled         Of hItem       To iEnabled
+    If (iGroup) ;
+         Set pbControlBeginGroup ;
+                          Of hItem       To True
     Send AddScriptControl Of hDemo1Menu  hItem hCommandBarControls
 End_Procedure
 
-// If does not exist, generate Repository
+// If does not exist, generate Repository, otherwise just clear
 If (ghoItems=0) Begin
     // Create Repository
-    Get Create Of hDemo1Menu U_Array To ghoItems
-    Set phoChildItems Of hDemo1Menu To ghoItems
+    Get Create        Of hDemo1Menu U_Array To ghoItems
+    Set phoChildItems Of hDemo1Menu         To ghoItems
 End
-Else Send DestroyChildItems To ghoItems
+Else Send DestroyChildItems                 To ghoItems
 
 // Populate with Menu Items 
-Send mCreateMenuItem "&Undo"   "Undo"       "Undo last action" ;
-                     "actionUndo.ico"       "Ctrl+Z"  "Edit"  ;
-                     "Msg_mMenuActionUndo"  (CanUndo(Focus(Self)))
-Send mCreateMenuItem "Cu&t"    "Cut"        "Cuts the selection and puts it on the Clipboard" ;
-                     "actionCut.ico"        "Ctrl+X"  "Edit" ;
-                     "Msg_mMenuActionCut"   (CanCut(Focus(Self)))
-Send mCreateMenuItem "&Copy"   "Copy"       "Copies the selection and puts it on the Clipboard" ;
-                     "actionCopy.ico"       "Ctrl+C"  "Edit"  ;
-                     "Msg_mMenuActionCopy"  (CanCopy(Focus(Self)))
-Send mCreateMenuItem "&Paste"  "Paste"      "Inserts Clipboard contents" ;
-                     "actionPaste.ico"      "Ctrl+V"  "Edit"  ;
-                     "Msg_mMenuActionPaste" (CanPaste(Focus(Self)))
-Send mCreateMenuItem "&Delete" "Delete"     "Delete Selected text" ;
-                     "actionDelete.ico"     "Delete"  "Edit"  ;
-                     "Msg_mMenuActionDelete"  (CanDelete(Focus(Self)))
+Send mCreateMenuItem "&Undo"   "Undo"        "Undo last action" ;
+                     "actionUndo.ico"        "Ctrl+Z"  "Edit"  ;
+                     "Msg_mMenuActionUndo"   (CanUndo(Focus(Self)))     0
+Send mCreateMenuItem "&Redo"   "Redo"        "Redo last action" ;
+                     "actionRedo.ico"        "Ctrl+Y"  "Edit"  ;
+                     "Msg_mMenuActionRedo"   (CanRedo(Focus(Self)))     0
+Send mCreateMenuItem "Cu&t"    "Cut"         "Cuts the selection and puts it on the Clipboard" ;
+                     "actionCut.ico"         "Ctrl+X"  "Edit" ;
+                     "Msg_mMenuActionCut"    (CanCut(Focus(Self)))      1
+Send mCreateMenuItem "&Copy"   "Copy"        "Copies the selection and puts it on the Clipboard" ;
+                     "actionCopy.ico"        "Ctrl+C"  "Edit"  ;
+                     "Msg_mMenuActionCopy"   (CanCopy(Focus(Self)))     0
+Send mCreateMenuItem "&Paste"  "Paste"       "Inserts Clipboard contents" ;
+                     "actionPaste.ico"       "Ctrl+V"  "Edit"  ;
+                     "Msg_mMenuActionPaste"  (CanPaste(Focus(Self)))    0
+Send mCreateMenuItem "&Delete" "Delete"      "Delete Selected text" ;
+                     "actionDelete.ico"      "Delete"  "Edit"  ;
+                     "Msg_mMenuActionDelete" (CanDelete(Focus(Self)))   0
